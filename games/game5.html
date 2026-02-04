@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日语语法拆分特训</title>
+    <style>
+        body { font-family: "Hiragino Sans", sans-serif; background: #f0f2f5; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2C3E50; }
+        .progress-bar { width: 100%; height: 10px; background: #eee; border-radius: 5px; margin: 20px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: #4ECDC4; width: 0%; transition: width 0.3s; }
+        
+        .sentence-area { 
+            min-height: 80px; border: 2px dashed #ccc; border-radius: 10px; 
+            margin: 20px 0; padding: 10px; display: flex; flex-wrap: wrap; 
+            gap: 10px; justify-content: center; align-items: center; background: #fafafa;
+        }
+        .sentence-area.correct { border-color: #2ecc71; background: #e8f8f5; }
+        
+        .word-pool { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 30px; }
+        
+        .card { 
+            padding: 10px 20px; background: white; border: 2px solid #3498db; 
+            border-radius: 8px; cursor: pointer; font-size: 1.2rem; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; user-select: none;
+        }
+        .card:hover { transform: translateY(-3px); }
+        .card.used { opacity: 0.5; pointer-events: none; background: #ddd; border-color: #ccc; }
+        
+        .slot-card {
+            padding: 10px 20px; background: #3498db; color: white; border-radius: 8px; cursor: pointer;
+        }
+
+        .feedback { height: 30px; font-weight: bold; margin: 10px 0; }
+        .btn { padding: 10px 30px; background: #2C3E50; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 1rem; margin-top: 20px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧩 语法拆分特训</h1>
+    <p>点击下方单词卡片，将其按正确语序填入框中。</p>
+    
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    
+    <div style="margin-bottom: 10px; color: #666;">中文含义: <span id="cn-hint" style="font-weight: bold; color: #333;"></span></div>
+    
+    <!-- 答题区 -->
+    <div class="sentence-area" id="answer-box">
+        <span style="color:#ccc; font-size: 0.9rem;">(点击下方词汇组句)</span>
+    </div>
+    
+    <div class="feedback" id="feedback"></div>
+
+    <!-- 单词池 -->
+    <div class="word-pool" id="pool"></div>
+
+    <button class="btn" id="next-btn" onclick="nextLevel()">下一题</button>
+</div>
+
+<script>
+    const levels = [
+        { cn: "我吃苹果。", parts: ["私", "は", "りんご", "を", "食べます"], correct: "私はりんごを食べます" },
+        { cn: "明天去图书馆。", parts: ["明日", "図書館", "へ", "行きます"], correct: "明日図書館へ行きます" },
+        { cn: "这是我的书。", parts: ["これ", "は", "私", "の", "本", "です"], correct: "これは私の本です" },
+        { cn: "田中先生是日本人。", parts: ["田中さん", "は", "日本人", "です"], correct: "田中さんは日本人です" },
+        { cn: "在食堂吃午饭。", parts: ["食堂", "で", "昼ご飯", "を", "食べます"], correct: "食堂で昼ご飯を食べます" }
+    ];
+
+    let currentLevel = 0;
+    let currentAnswer = []; // 存储玩家当前排序的单词
+
+    function initGame() {
+        currentLevel = 0;
+        loadLevel();
+    }
+
+    function loadLevel() {
+        const data = levels[currentLevel];
+        document.getElementById('cn-hint').innerText = data.cn;
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('answer-box').className = 'sentence-area';
+        document.getElementById('answer-box').innerHTML = ''; // 清空答题区
+        document.getElementById('progress').style.width = ((currentLevel / levels.length) * 100) + "%";
+        
+        currentAnswer = [];
+        
+        // 生成打乱的单词卡片
+        const pool = document.getElementById('pool');
+        pool.innerHTML = '';
+        
+        // 简单的打乱算法
+        let shuffled = [...data.parts].sort(() => Math.random() - 0.5);
+        
+        shuffled.forEach((word, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerText = word;
+            card.dataset.word = word;
+            card.onclick = () => selectWord(card);
+            pool.appendChild(card);
+        });
+    }
+
+    function selectWord(cardElement) {
+        // 移动到上方
+        const word = cardElement.dataset.word;
+        currentAnswer.push(word);
+        
+        // 视觉变化
+        cardElement.classList.add('used');
+        
+        // 在答题区创建新卡片
+        const slot = document.createElement('div');
+        slot.className = 'slot-card';
+        slot.innerText = word;
+        slot.onclick = () => removeWord(slot, cardElement);
+        document.getElementById('answer-box').appendChild(slot);
+        
+        checkAnswer();
+    }
+
+    function removeWord(slotElement, originalCard) {
+        // 移除
+        slotElement.remove();
+        originalCard.classList.remove('used');
+        
+        // 从答案数组移除 (这里简化处理，移除最后一个匹配项)
+        const idx = currentAnswer.indexOf(slotElement.innerText);
+        if (idx > -1) currentAnswer.splice(idx, 1);
+        
+        document.getElementById('answer-box').className = 'sentence-area';
+        document.getElementById('feedback').innerText = "";
+    }
+
+    function checkAnswer() {
+        const data = levels[currentLevel];
+        const playerSentence = currentAnswer.join("");
+        
+        // 检查是否所有词都用完了
+        if (currentAnswer.length === data.parts.length) {
+            if (playerSentence === data.correct) {
+                document.getElementById('answer-box').classList.add('correct');
+                document.getElementById('feedback').innerText = "🎉 正确！Perfect!";
+                document.getElementById('feedback').style.color = "#2ecc71";
+                document.getElementById('next-btn').style.display = 'inline-block';
+                if(currentLevel === levels.length -1) {
+                    document.getElementById('next-btn').innerText = "通关完成";
+                }
+            } else {
+                document.getElementById('feedback').innerText = "❌ 语序不对哦，请撤回重试";
+                document.getElementById('feedback').style.color = "#e74c3c";
+            }
+        }
+    }
+
+    function nextLevel() {
+        if (currentLevel < levels.length - 1) {
+            currentLevel++;
+            loadLevel();
+        } else {
+            alert("恭喜你完成了所有特训！");
+            initGame();
+        }
+    }
+
+    initGame();
+</script>
+</body>
+</html>

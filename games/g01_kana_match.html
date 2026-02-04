@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>假名消消乐 V7.2</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-main: #2d3436;
+            --font-cn: "Microsoft YaHei", "PingFang SC", sans-serif;
+            --font-jp: "M PLUS Rounded 1c", sans-serif;
+            
+            /* 品牌色 */
+            --c-green: #00b894;
+            --c-blue: #0984e3;
+            --c-purple: #6c5ce7;
+            --c-red: #d63031;
+        }
+
+        body {
+            font-family: var(--font-cn);
+            background-color: var(--bg-color);
+            margin: 0; height: 100vh;
+            overflow: hidden; user-select: none;
+            color: var(--text-main);
+        }
+
+        /* ================= 布局容器 ================= */
+        .app-container {
+            display: flex;
+            width: 100%; height: 100%;
+            position: relative;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* 左侧：主菜单面板 */
+        .left-panel {
+            flex: 1;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: white;
+            z-index: 10;
+            box-shadow: 5px 0 30px rgba(0,0,0,0.05);
+            transition: all 0.5s ease;
+            padding: 20px;
+        }
+        
+        .app-container.mode-active .left-panel {
+            flex: 0 0 35%; 
+            align-items: flex-end; 
+            padding-right: 40px;
+            background: #f1f2f6; 
+        }
+
+        /* 右侧：子菜单面板 */
+        .right-panel {
+            flex: 0; width: 0; opacity: 0;
+            background: white;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            overflow: hidden;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .app-container.mode-active .right-panel {
+            flex: 1; width: auto; opacity: 1;
+        }
+
+        /* ================= 左侧内容设计 ================= */
+        .title-area {
+            text-align: center; margin-bottom: 40px;
+            transition: transform 0.4s;
+        }
+        .app-title {
+            font-size: 48px; font-weight: 900; color: #333;
+            letter-spacing: 2px; margin: 0;
+        }
+        .app-subtitle { color: #b2bec3; font-size: 16px; margin-top: 5px; font-weight: bold; }
+
+        .menu-list {
+            display: flex; flex-direction: column; gap: 20px;
+            width: 100%; max-width: 320px;
+        }
+
+        .mode-card {
+            background: white; border-radius: 20px; padding: 20px 25px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; transition: all 0.3s;
+            border: 2px solid transparent;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            position: relative; overflow: hidden;
+        }
+        
+        .icon-circle {
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; color: white; margin-right: 15px; flex-shrink: 0;
+        }
+
+        .mode-info { flex: 1; }
+        .m-title { font-size: 20px; font-weight: bold; color: #2d3436; }
+        .m-desc { font-size: 12px; color: #aaa; margin-top: 2px; }
+        .arrow { color: #ddd; font-weight: bold; transition: 0.3s; }
+
+        .mc-green .icon-circle { background: linear-gradient(135deg, #55efc4, #00b894); }
+        .mc-blue .icon-circle  { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+        .mc-purple .icon-circle{ background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+        .mc-red .icon-circle   { background: linear-gradient(135deg, #ff7675, #d63031); }
+
+        .mode-card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .mode-card:hover .arrow { color: #333; transform: translateX(5px); }
+
+        .app-container.mode-active .mode-card {
+            padding: 15px; background: white; opacity: 0.6; transform: scale(0.95);
+        }
+        .app-container.mode-active .mode-card.active {
+            opacity: 1; border-color: var(--active-color);
+            transform: scale(1.05) translateX(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 2;
+        }
+
+        /* ================= 右侧内容设计 ================= */
+        .sub-content {
+            width: 90%; max-width: 450px; padding: 20px;
+            animation: slideIn 0.4s 0.1s backwards;
+        }
+        
+        .sub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .sub-title { font-size: 28px; font-weight: 800; color: #333; }
+        
+        .chapter-grid { display: grid; gap: 15px; }
+        
+        .chapter-item {
+            background: white; border: 1px solid #eee;
+            border-radius: 16px; padding: 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; transition: 0.2s;
+        }
+        .chapter-item:hover {
+            border-color: var(--active-color); background: #fdfdfd;
+            transform: translateX(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .cp-left h3 { margin: 0; font-size: 18px; color: #333; }
+        .cp-left p { margin: 5px 0 0; font-size: 13px; color: #999; }
+        .cp-tag {
+            font-size: 12px; font-weight: bold; padding: 5px 12px;
+            border-radius: 20px; background: #f0f0f0; color: #666;
+        }
+
+        .timer-switch {
+            display: flex; align-items: center; gap: 10px;
+            background: #fff; padding: 8px 16px; border-radius: 30px;
+            border: 1px solid #eee; font-size: 14px; font-weight: bold; color: #555;
+        }
+        .switch-ui {
+            width: 40px; height: 22px; background: #ccc; border-radius: 22px;
+            position: relative; transition: 0.3s; cursor: pointer;
+        }
+        .switch-ui::after {
+            content:''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+            background: white; border-radius: 50%; transition: 0.3s;
+        }
+        input:checked + .switch-ui { background: #ff6b6b; }
+        input:checked + .switch-ui::after { transform: translateX(18px); }
+
+        .close-sub-btn { display: none; font-size: 24px; color: #999; cursor: pointer; }
+
+        /* ================= 3. 游戏界面 ================= */
+        .game-screen {
+            display: none; flex-direction: column; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 200;
+            background: #fdfbf7;
+        }
+        
+        .header {
+            padding: 15px 20px; background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); z-index: 10;
+        }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        /* 顶部按钮组 */
+        .btn-group { display: flex; gap: 10px; align-items: center; }
+        .icon-btn {
+            border: none; background: #eee; width: 40px; height: 40px; border-radius: 50%;
+            font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s;
+        }
+        .icon-btn:active { transform: scale(0.9); background: #ddd; }
+
+        .lvl-info { font-size: 20px; font-weight: 900; color: #2c3e50; }
+        .timer-display { font-size: 24px; font-weight: bold; color: #e74c3c; font-family: monospace; }
+        
+        .progress-track { width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #2ecc71; width: 0%; transition: width 0.3s; }
+
+        .board {
+            flex: 1; padding: 20px;
+            display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+            gap: 15px; overflow-y: auto;
+        }
+
+        .card {
+            width: 75px; height: 75px; border-radius: 18px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 26px; font-weight: bold; cursor: pointer; position: relative;
+            transition: transform 0.1s; background: white; color: #555;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.1); opacity: 0; transform: translateY(20px);
+        }
+        .card.show { opacity: 1; transform: translateY(0); }
+        .card:active { transform: translateY(6px); box-shadow: 0 0 0 rgba(0,0,0,0); }
+        .card.matched { transform: scale(0); opacity: 0; transition: 0.4s; pointer-events: none; }
+        .card.selected { transform: translateY(6px); box-shadow: inset 0 3px 5px rgba(0,0,0,0.1); filter: brightness(0.95); }
+        .card.wrong { animation: shake 0.4s; background: #ff7675 !important; color: white !important; }
+        .card.color-a { background: var(--c1-bg); color: var(--c1-txt); box-shadow: 0 6px 0 var(--c1-shadow); }
+        .card.color-b { background: var(--c2-bg); color: var(--c2-txt); box-shadow: 0 6px 0 var(--c2-shadow); }
+        .card.romaji { font-family: "Varela Round", sans-serif; font-size: 20px; }
+        .card.kana { font-family: var(--font-jp); }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 300;
+            display: none; justify-content: center; align-items: center; flex-direction: column;
+        }
+        .modal-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 80%; max-width: 300px; }
+        .modal h2 { margin: 0 0 10px; font-size: 32px; }
+        .modal-btn { background: #3498db; color: white; padding: 12px 30px; border-radius: 30px; border: none; font-size: 18px; cursor: pointer; margin-top: 20px; }
+
+        #confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 250; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+        @media (max-width: 768px) {
+            .app-container.mode-active .left-panel { flex: 0 0 0; padding: 0; overflow: hidden; }
+            .close-sub-btn { display: block; }
+            .title-area { margin-bottom: 20px; }
+            .app-title { font-size: 36px; }
+            .mode-card { padding: 15px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="confetti"></canvas>
+
+    <!-- 主容器 -->
+    <div class="app-container" id="appContainer">
+        <!-- 左侧 -->
+        <div class="left-panel">
+            <div class="title-area">
+                <h1 class="app-title">假名消消乐</h1>
+                <div class="app-subtitle">Kana Match V7.2</div>
+            </div>
+            <div class="menu-list">
+                <div class="mode-card mc-green" onclick="selectMode('seion', this, '#00b894')">
+                    <div class="icon-circle">🌱</div>
+                    <div class="mode-info"><div class="m-title">清音篇</div><div class="m-desc">基础五十音 (a-n)</div></div>
+                    <div class="arrow">&gt;</div>
+                </div>
+                <div class="mode-card mc-blue" onclick="selectMode('dakuon', this, '#0984e3')">
+                    <div class="icon-circle">🌊</div>
+                    <div class="mode-info"><div class="m-title">浊音篇</div><div class="m-desc">点点圈圈 (ga, pa)</div></div>
+                    <div class="arrow">&gt;</div>
+                </div>
+                <div class="mode-card mc-purple" onclick="selectMode('yoon', this, '#6c5ce7')">
+                    <div class="icon-circle">🌪️</div>
+                    <div class="mode-info"><div class="m-title">拗音篇</div><div class="m-desc">组合音 (kya, shu)</div></div>
+                    <div class="arrow">&gt;</div>
+                </div>
+                <div class="mode-card mc-red" onclick="selectMode('mix', this, '#d63031')">
+                    <div class="icon-circle">👑</div>
+                    <div class="mode-info"><div class="m-title">大综合</div><div class="m-desc">全能大师挑战</div></div>
+                    <div class="arrow">&gt;</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧 -->
+        <div class="right-panel">
+            <div class="sub-content">
+                <div class="sub-header">
+                    <div>
+                        <div class="sub-title" id="subTitle">选择章节</div>
+                        <div style="font-size:12px; color:#999; margin-top:5px;">请选择开始的关卡</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <label class="timer-switch">
+                            <input type="checkbox" id="timerToggle" checked hidden>
+                            <div class="switch-ui"></div><span>限时</span>
+                        </label>
+                        <div class="close-sub-btn" onclick="closeSubMenu()">✕</div>
+                    </div>
+                </div>
+                <div class="chapter-grid">
+                    <div class="chapter-item" onclick="startLevel(1)">
+                        <div class="cp-left"><h3>基础入门</h3><p>Level 1 - 10</p></div>
+                        <div class="cp-tag">罗马音 ↔ 平假名</div>
+                    </div>
+                    <div class="chapter-item" onclick="startLevel(11)">
+                        <div class="cp-left"><h3>进阶挑战</h3><p>Level 11 - 20</p></div>
+                        <div class="cp-tag">罗马音 ↔ 片假名</div>
+                    </div>
+                    <div class="chapter-item" onclick="startLevel(21)">
+                        <div class="cp-left"><h3>假名转换</h3><p>Level 21 - 30</p></div>
+                        <div class="cp-tag">平假名 ↔ 片假名</div>
+                    </div>
+                    <div class="chapter-item" onclick="startLevel(31)">
+                        <div class="cp-left"><h3 style="color:#d63031">地狱混合</h3><p>Level 31 - 50</p></div>
+                        <div class="cp-tag" style="background:#ffecec; color:#d63031">🔥 随机大乱斗</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div class="game-screen" id="gameScreen">
+        <div class="header">
+            <div class="top-row">
+                <!-- 左上角按钮组 -->
+                <div class="btn-group">
+                    <button class="icon-btn" onclick="quitGame()">🏡</button>
+                    <button class="icon-btn" id="voiceToggleBtn" onclick="toggleVoice()">🔊</button>
+                </div>
+
+                <div class="lvl-info" id="lvlDisplay">Level 1</div>
+                <div class="timer-display" id="timerDisplay">60</div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progressBar"></div></div>
+        </div>
+        <div class="board" id="board"></div>
+    </div>
+
+    <!-- 结算弹窗 -->
+    <div class="modal" id="resultModal">
+        <div class="modal-box">
+            <h2 id="modalTitle">🎉 成功!</h2>
+            <p id="modalMsg" style="color:#666">进入下一关...</p>
+            <button class="modal-btn" id="modalBtn" onclick="nextLevel()">继续</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= 交互逻辑 =================
+        let currentMode = 'seion';
+        let isVoiceOn = true; // 默认开启语音
+        
+        function selectMode(mode, el, color) {
+            currentMode = mode;
+            document.getElementById('appContainer').classList.add('mode-active');
+            document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            document.documentElement.style.setProperty('--active-color', color);
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function closeSubMenu() {
+            document.getElementById('appContainer').classList.remove('mode-active');
+            document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+        }
+
+        function startLevel(lvl) {
+            currentLevel = lvl;
+            isTimerOn = document.getElementById('timerToggle').checked;
+            document.getElementById('gameScreen').style.display = 'flex';
+            loadRound();
+        }
+
+        function quitGame() {
+            clearInterval(timerInterval);
+            document.getElementById('gameScreen').style.display = 'none';
+        }
+
+        // 切换日语发音开关
+        function toggleVoice() {
+            isVoiceOn = !isVoiceOn;
+            const btn = document.getElementById('voiceToggleBtn');
+            btn.innerText = isVoiceOn ? '🔊' : '🔇';
+        }
+
+        // ================= 游戏数据 =================
+        const DATA = {
+            seion: [
+                {r:'a', h:'あ', k:'ア'}, {r:'i', h:'い', k:'イ'}, {r:'u', h:'う', k:'ウ'}, {r:'e', h:'え', k:'エ'}, {r:'o', h:'お', k:'オ'},
+                {r:'ka', h:'か', k:'カ'}, {r:'ki', h:'き', k:'キ'}, {r:'ku', h:'く', k:'ク'}, {r:'ke', h:'け', k:'ケ'}, {r:'ko', h:'こ', k:'コ'},
+                {r:'sa', h:'さ', k:'サ'}, {r:'shi', h:'し', k:'シ'}, {r:'su', h:'す', k:'ス'}, {r:'se', h:'せ', k:'セ'}, {r:'so', h:'そ', k:'ソ'},
+                {r:'ta', h:'た', k:'タ'}, {r:'chi', h:'ち', k:'チ'}, {r:'tsu', h:'つ', k:'ツ'}, {r:'te', h:'て', k:'テ'}, {r:'to', h:'と', k:'ト'},
+                {r:'na', h:'な', k:'ナ'}, {r:'ni', h:'に', k:'ニ'}, {r:'nu', h:'ぬ', k:'ヌ'}, {r:'ne', h:'ね', k:'ネ'}, {r:'no', h:'の', k:'ノ'},
+                {r:'ha', h:'は', k:'ハ'}, {r:'hi', h:'ひ', k:'ヒ'}, {r:'fu', h:'ふ', k:'フ'}, {r:'he', h:'へ', k:'ヘ'}, {r:'ho', h:'ほ', k:'ホ'},
+                {r:'ma', h:'ま', k:'マ'}, {r:'mi', h:'み', k:'ミ'}, {r:'mu', h:'む', k:'ム'}, {r:'me', h:'め', k:'メ'}, {r:'mo', h:'も', k:'モ'},
+                {r:'ya', h:'や', k:'ヤ'}, {r:'yu', h:'ゆ', k:'ユ'}, {r:'yo', h:'よ', k:'ヨ'},
+                {r:'ra', h:'ら', k:'ラ'}, {r:'ri', h:'り', k:'リ'}, {r:'ru', h:'る', k:'ル'}, {r:'re', h:'れ', k:'レ'}, {r:'ro', h:'ろ', k:'ロ'},
+                {r:'wa', h:'わ', k:'ワ'}, {r:'wo', h:'を', k:'ヲ'}, {r:'n', h:'ん', k:'ン'}
+            ],
+            dakuon: [
+                {r:'ga', h:'が', k:'ガ'}, {r:'gi', h:'ぎ', k:'ギ'}, {r:'gu', h:'ぐ', k:'グ'}, {r:'ge', h:'げ', k:'ゲ'}, {r:'go', h:'ご', k:'ゴ'},
+                {r:'za', h:'ざ', k:'ザ'}, {r:'ji', h:'じ', k:'ジ'}, {r:'zu', h:'ず', k:'ズ'}, {r:'ze', h:'ぜ', k:'ゼ'}, {r:'zo', h:'ぞ', k:'ゾ'},
+                {r:'da', h:'だ', k:'ダ'}, {r:'ji', h:'ぢ', k:'ヂ'}, {r:'zu', h:'づ', k:'ヅ'}, {r:'de', h:'で', k:'デ'}, {r:'do', h:'ど', k:'ド'},
+                {r:'ba', h:'ば', k:'バ'}, {r:'bi', h:'び', k:'ビ'}, {r:'bu', h:'ぶ', k:'ブ'}, {r:'be', h:'べ', k:'ベ'}, {r:'bo', h:'ぼ', k:'ボ'},
+                {r:'pa', h:'ぱ', k:'パ'}, {r:'pi', h:'ぴ', k:'ピ'}, {r:'pu', h:'ぷ', k:'プ'}, {r:'pe', h:'ぺ', k:'ペ'}, {r:'po', h:'ぽ', k:'ポ'}
+            ],
+            yoon: [
+                {r:'kya', h:'きゃ', k:'キャ'}, {r:'kyu', h:'きゅ', k:'キュ'}, {r:'kyo', h:'きょ', k:'キョ'},
+                {r:'sha', h:'しゃ', k:'シャ'}, {r:'shu', h:'しゅ', k:'シュ'}, {r:'sho', h:'しょ', k:'ショ'},
+                {r:'cha', h:'ちゃ', k:'チャ'}, {r:'chu', h:'ちゅ', k:'チュ'}, {r:'cho', h:'ちょ', k:'チョ'},
+                {r:'nya', h:'にゃ', k:'ニャ'}, {r:'nyu', h:'にゅ', k:'ニュ'}, {r:'nyo', h:'にょ', k:'ニョ'},
+                {r:'hya', h:'ひゃ', k:'ヒャ'}, {r:'hyu', h:'ひゅ', k:'ヒュ'}, {r:'hyo', h:'ひょ', k:'ヒョ'},
+                {r:'mya', h:'みゃ', k:'ミャ'}, {r:'myu', h:'みゅ', k:'ミュ'}, {r:'myo', h:'みょ', k:'ミョ'},
+                {r:'rya', h:'りゃ', k:'リャ'}, {r:'ryu', h:'りゅ', k:'リュ'}, {r:'ryo', h:'りょ', k:'リョ'},
+                {r:'gya', h:'ぎゃ', k:'ギャ'}, {r:'gyu', h:'ぎゅ', k:'ギュ'}, {r:'gyo', h:'ぎょ', k:'ギョ'},
+                {r:'ja', h:'じゃ', k:'ジャ'},  {r:'ju', h:'じゅ', k:'ジュ'},  {r:'jo', h:'じょ', k:'ジョ'},
+                {r:'bya', h:'びゃ', k:'ビャ'}, {r:'byu', h:'びゅ', k:'ビュ'}, {r:'byo', h:'びょ', k:'ビョ'},
+                {r:'pya', h:'ぴゃ', k:'ピャ'}, {r:'pyu', h:'ぴゅ', k:'ピュ'}, {r:'pyo', h:'ぴょ', k:'ピョ'}
+            ]
+        };
+
+        const THEMES = [
+            { c1: {bg:'#ff9ff3', txt:'#fff', sh:'#f368e0'}, c2: {bg:'#54a0ff', txt:'#fff', sh:'#2e86de'} },
+            { c1: {bg:'#feca57', txt:'#fff', sh:'#ff9f43'}, c2: {bg:'#1dd1a1', txt:'#fff', sh:'#10ac84'} },
+            { c1: {bg:'#ff6b6b', txt:'#fff', sh:'#ee5253'}, c2: {bg:'#48dbfb', txt:'#fff', sh:'#0abde3'} },
+            { c1: {bg:'#a29bfe', txt:'#fff', sh:'#6c5ce7'}, c2: {bg:'#55efc4', txt:'#555', sh:'#00b894'} },
+            { c1: {bg:'#fab1a0', txt:'#fff', sh:'#e17055'}, c2: {bg:'#74b9ff', txt:'#fff', sh:'#0984e3'} }
+        ];
+
+        let currentLevel = 1;
+        let maxLevel = 50;
+        let isTimerOn = true;
+        let timerInterval;
+        let timeLeft = 60;
+        let selectedCards = [];
+        let matchedCount = 0;
+        let isLocked = false;
+
+        function loadRound() {
+            document.getElementById('lvlDisplay').innerText = `Level ${currentLevel}`;
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('resultModal').style.display = 'none';
+            
+            if (isTimerOn) {
+                if(currentLevel <= 10) timeLeft = 60;
+                else if(currentLevel <= 20) timeLeft = 50;
+                else if(currentLevel <= 30) timeLeft = 40;
+                else timeLeft = 30;
+                document.getElementById('timerDisplay').innerText = timeLeft;
+                document.getElementById('timerDisplay').style.display = 'block';
+                startTimer();
+            } else {
+                document.getElementById('timerDisplay').style.display = 'none';
+            }
+
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            matchedCount = 0;
+            selectedCards = [];
+            isLocked = false;
+
+            let pool = [];
+            if (currentMode === 'mix') pool = [...DATA.seion, ...DATA.dakuon, ...DATA.yoon];
+            else pool = DATA[currentMode];
+
+            let roundData = [...pool].sort(() => 0.5 - Math.random()).slice(0, 10);
+            const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+            document.documentElement.style.setProperty('--c1-bg', theme.c1.bg);
+            document.documentElement.style.setProperty('--c1-txt', theme.c1.txt);
+            document.documentElement.style.setProperty('--c1-shadow', theme.c1.sh);
+            document.documentElement.style.setProperty('--c2-bg', theme.c2.bg);
+            document.documentElement.style.setProperty('--c2-txt', theme.c2.txt);
+            document.documentElement.style.setProperty('--c2-shadow', theme.c2.sh);
+
+            let cards = [];
+            roundData.forEach((item, idx) => {
+                let type = 0; 
+                if(currentLevel <= 10) type = 0;
+                else if(currentLevel <= 20) type = 1;
+                else if(currentLevel <= 30) type = 2;
+                else type = Math.floor(Math.random() * 3);
+
+                let t1, t2;
+                if (type === 0) {
+                    t1 = { txt: item.r, cls: 'romaji color-a' };
+                    t2 = { txt: item.h, cls: 'kana color-b' };
+                } else if (type === 1) {
+                    t1 = { txt: item.r, cls: 'romaji color-a' };
+                    t2 = { txt: item.k, cls: 'kana color-b' };
+                } else {
+                    t1 = { txt: item.h, cls: 'kana color-a' };
+                    t2 = { txt: item.k, cls: 'kana color-b' };
+                }
+                cards.push({ ...t1, mid: idx, sound: item.h });
+                cards.push({ ...t2, mid: idx, sound: item.h });
+            });
+
+            cards.sort(() => 0.5 - Math.random());
+            cards.forEach((c, i) => {
+                const el = document.createElement('div');
+                el.className = `card ${c.cls}`;
+                el.innerText = c.txt;
+                el.dataset.mid = c.mid;
+                el.dataset.sound = c.sound;
+                el.onclick = () => cardClick(el);
+                board.appendChild(el);
+                setTimeout(() => el.classList.add('show'), i * 30);
+            });
+        }
+
+        function cardClick(el) {
+            if (isLocked || el.classList.contains('matched') || el.classList.contains('selected')) return;
+            
+            // 只有当语音开关打开时才朗读
+            if (isVoiceOn) {
+                speak(el.dataset.sound);
+            }
+            
+            el.classList.add('selected');
+            selectedCards.push(el);
+            
+            if (selectedCards.length === 2) {
+                isLocked = true;
+                const [c1, c2] = selectedCards;
+                if (c1.dataset.mid === c2.dataset.mid) {
+                    // 无论语音开关如何，始终播放音效
+                    playSound('ding');
+                    setTimeout(() => {
+                        c1.classList.add('matched'); c2.classList.add('matched');
+                        matchedCount++;
+                        document.getElementById('progressBar').style.width = (matchedCount / 10 * 100) + '%';
+                        resetSel();
+                        if (matchedCount === 10) winLevel();
+                    }, 300);
+                } else {
+                    playSound('buzz');
+                    c1.classList.add('wrong'); c2.classList.add('wrong');
+                    setTimeout(() => {
+                        c1.classList.remove('wrong', 'selected'); c2.classList.remove('wrong', 'selected');
+                        resetSel();
+                    }, 500);
+                }
+            }
+        }
+
+        function resetSel() { selectedCards = []; isLocked = false; }
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timerDisplay').innerText = timeLeft;
+                if (timeLeft <= 0) { clearInterval(timerInterval); showModal(false); }
+            }, 1000);
+        }
+        function winLevel() { clearInterval(timerInterval); fireConfetti(); showModal(true); }
+        function showModal(win) {
+            const m = document.getElementById('resultModal');
+            const t = document.getElementById('modalTitle');
+            const msg = document.getElementById('modalMsg');
+            const btn = document.getElementById('modalBtn');
+            m.style.display = 'flex';
+            if (win) {
+                t.innerText = "🎉 闯关成功!"; t.style.color = "#2ecc71";
+                msg.innerText = currentLevel === maxLevel ? "恭喜通关！" : "准备好进入下一关了吗？";
+                btn.innerText = currentLevel === maxLevel ? "返回主页" : "下一关";
+                btn.onclick = currentLevel === maxLevel ? quitGame : nextLevel;
+            } else {
+                t.innerText = "⏰ 时间到!"; t.style.color = "#e74c3c";
+                msg.innerText = "不要灰心，再试一次！";
+                btn.innerText = "重试";
+                btn.onclick = () => { m.style.display = 'none'; loadRound(); };
+            }
+        }
+        function nextLevel() { currentLevel++; loadRound(); }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            if(type === 'ding') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+            } else {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+            }
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+        }
+        
+        function speak(text) {
+            if(/^[a-zA-Z]+$/.test(text)) return; 
+            const u = new SpeechSynthesisUtterance(text); 
+            u.lang = 'ja-JP'; 
+            speechSynthesis.speak(u);
+        }
+        
+        const canvas = document.getElementById('confetti'); const ctx = canvas.getContext('2d');
+        let particles = [];
+        window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }; window.onresize();
+        function fireConfetti() {
+            for(let i=0; i<80; i++) particles.push({x: canvas.width/2, y: canvas.height/2, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, c: `hsl(${Math.random()*360}, 100%, 50%)`, life: 100});
+            loopConfetti();
+        }
+        function loopConfetti() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            particles.forEach((p,i) => { p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.life--; ctx.fillStyle=p.c; ctx.fillRect(p.x,p.y,6,6); if(p.life<=0) particles.splice(i,1); });
+            if(particles.length>0) requestAnimationFrame(loopConfetti);
+        }
+    </script>
+</body>
+</html>

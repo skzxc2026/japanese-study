@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>形容词分类屋</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            font-family: "M PLUS Rounded 1c", "Microsoft YaHei", sans-serif;
+            background: #fdfbfb;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* 顶部区域 */
+        .header {
+            padding: 10px 20px;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 10;
+        }
+        .status-badge {
+            background: #FF9800; color: white; padding: 5px 15px;
+            border-radius: 20px; font-weight: bold; font-size: 0.9rem;
+        }
+
+        /* 房子区域 */
+        #houses-area {
+            height: 40%;
+            background: #e0f7fa;
+            border-bottom: 5px solid #81d4fa;
+            display: flex; justify-content: space-around; align-items: flex-end;
+            padding-bottom: 15px;
+            position: relative;
+        }
+
+        .house {
+            width: 40%; height: 75%;
+            background: #fff;
+            border: 3px solid #546E7A;
+            border-radius: 0 0 10px 10px;
+            position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        .house.hover { transform: scale(1.05); background: #fffde7; }
+
+        /* 屋顶 */
+        .roof {
+            position: absolute; top: -50px; left: -10%; width: 120%; height: 50px;
+            background: #FF7043;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+        #house-na .roof { background: #26A69A; }
+
+        .house-label { font-size: 1.2rem; font-weight: bold; color: #37474F; margin-top: 5px; }
+        .house-desc { font-size: 0.8rem; color: #78909C; }
+
+        /* 桌面区域 (卡片池) */
+        #desk-area {
+            flex: 1;
+            background: #D7CCC8; /* 木纹色 */
+            background-image: repeating-linear-gradient(45deg, #D7CCC8 25%, #cfb9b0 25%, #cfb9b0 50%, #D7CCC8 50%, #D7CCC8 75%, #cfb9b0 75%, #cfb9b0 100%);
+            background-size: 20px 20px;
+            padding: 20px;
+            overflow-y: auto; /* 允许滚动 */
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        /* 单词卡片 */
+        .card {
+            background: white;
+            border: 2px solid #8D6E63;
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: center;
+            cursor: grab;
+            box-shadow: 0 4px 0 #8D6E63, 0 5px 10px rgba(0,0,0,0.1);
+            user-select: none;
+            touch-action: none;
+            transition: transform 0.1s;
+            min-width: 80px;
+            background-color: #FFF8E1;
+        }
+        .card:active { cursor: grabbing; transform: scale(0.95); }
+        .card-ruby { font-size: 0.7rem; color: #E65100; display: block; margin-bottom: 2px; }
+        .card-word { font-size: 1.1rem; font-weight: bold; color: #3E2723; }
+
+        /* 结算弹窗 */
+        #result-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100; color: white;
+        }
+        .btn {
+            background: #FF9800; color: white; border: none; padding: 12px 30px;
+            font-size: 1.1rem; border-radius: 30px; margin-top: 20px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div style="font-weight:bold; color:#5D4037;">🏠 整理房间</div>
+        <div class="status-badge" id="count-display">剩余: 20</div>
+    </div>
+
+    <div id="houses-area">
+        <!-- 一类 -->
+        <div class="house" id="house-i">
+            <div class="roof"></div>
+            <div class="house-label">い形容词</div>
+            <div class="house-desc">词尾是「い」</div>
+        </div>
+        <!-- 二类 -->
+        <div class="house" id="house-na">
+            <div class="roof"></div>
+            <div class="house-label">な形容词</div>
+            <div class="house-desc">词尾非「い」</div>
+        </div>
+    </div>
+
+    <div id="desk-area">
+        <!-- 卡片将在这里生成 -->
+    </div>
+
+    <div id="result-modal">
+        <h1>🎉 整理完成！</h1>
+        <p>房间变得干干净净</p>
+        <button class="btn" onclick="location.reload()">再来一局</button>
+    </div>
+
+<script>
+    // === 音效系统 ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'ding') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'buzz') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
+    }
+
+    // === 题库 (汉字+假名+类型) ===
+    const wordDB = [
+        {w:"高い", r:"たかい", t:"i"}, {w:"静か", r:"しずか", t:"na"},
+        {w:"暑い", r:"あつい", t:"i"}, {w:"有名", r:"ゆうめい", t:"na"},
+        {w:"大きい", r:"おおきい", t:"i"}, {w:"親切", r:"しんせつ", t:"na"},
+        {w:"美味しい", r:"おいしい", t:"i"}, {w:"便利", r:"べんり", t:"na"},
+        {w:"忙しい", r:"いそがしい", t:"i"}, {w:"きれい", r:"きれい", t:"na"}, // 陷阱
+        {w:"嫌い", r:"きらい", t:"na"}, {w:"面白い", r:"おもしろい", t:"i"}, // 陷阱
+        {w:"寒い", r:"さむい", t:"i"}, {w:"元気", r:"げんき", t:"na"},
+        {w:"新しい", r:"あたらしい", t:"i"}, {w:"暇", r:"ひま", t:"na"},
+        {w:"赤い", r:"あかい", t:"i"}, {w:"簡単", r:"かんたん", t:"na"},
+        {w:"難しい", r:"むずかしい", t:"i"}, {w:"立派", r:"りっぱ", t:"na"},
+        {w:"甘い", r:"あまい", t:"i"}, {w:"好き", r:"すき", t:"na"},
+        {w:"広い", r:"ひろい", t:"i"}, {w:"丈夫", r:"じょうぶ", t:"na"},
+        {w:"楽しい", r:"たのしい", t:"i"}, {w:"大変", r:"たいへん", t:"na"}
+    ];
+
+    let remaining = 0;
+
+    function init() {
+        // 随机选20个
+        const shuffled = [...wordDB].sort(() => Math.random() - 0.5).slice(0, 20);
+        remaining = shuffled.length;
+        updateCount();
+
+        const desk = document.getElementById('desk-area');
+        desk.innerHTML = '';
+
+        shuffled.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.type = item.t;
+            card.innerHTML = `<span class="card-ruby">${item.r}</span><span class="card-word">${item.w}</span>`;
+            
+            // 随机微小旋转，增加自然感
+            const rot = (Math.random() - 0.5) * 10;
+            card.style.transform = `rotate(${rot}deg)`;
+            
+            desk.appendChild(card);
+            makeDraggable(card);
+        });
+    }
+
+    function updateCount() {
+        document.getElementById('count-display').innerText = `剩余: ${remaining}`;
+        if (remaining === 0) {
+            setTimeout(() => {
+                document.getElementById('result-modal').style.display = 'flex';
+            }, 500);
+        }
+    }
+
+    // === 拖拽逻辑 ===
+    let startX, startY, initialLeft, initialTop;
+    let activeCard = null;
+
+    function makeDraggable(el) {
+        const start = (e) => {
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            activeCard = el;
+            startX = touch.clientX;
+            startY = touch.clientY;
+
+            const rect = el.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+
+            // 变为Fixed定位以脱离文档流进行拖拽
+            el.style.position = 'fixed';
+            el.style.left = initialLeft + 'px';
+            el.style.top = initialTop + 'px';
+            el.style.zIndex = 1000;
+            el.style.transform = 'scale(1.1) rotate(0deg)';
+            el.style.margin = 0; // 清除Flex布局下的margin影响
+
+            document.addEventListener('mousemove', move);
+            document.addEventListener('touchmove', move, {passive: false});
+            document.addEventListener('mouseup', end);
+            document.addEventListener('touchend', end);
+        };
+
+        const move = (e) => {
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            el.style.left = (initialLeft + dx) + 'px';
+            el.style.top = (initialTop + dy) + 'px';
+            
+            // 高亮检测
+            checkHover(el);
+        };
+
+        const end = (e) => {
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('touchmove', move);
+            document.removeEventListener('mouseup', end);
+            document.removeEventListener('touchend', end);
+            
+            // 移除高亮
+            document.querySelectorAll('.house').forEach(h => h.classList.remove('hover'));
+            
+            checkDrop(el);
+            activeCard = null;
+        };
+
+        el.addEventListener('mousedown', start);
+        el.addEventListener('touchstart', start, {passive: false});
+    }
+
+    function checkHover(card) {
+        const rect = card.getBoundingClientRect();
+        const center = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+        
+        const hI = document.getElementById('house-i').getBoundingClientRect();
+        const hNa = document.getElementById('house-na').getBoundingClientRect();
+
+        document.getElementById('house-i').classList.toggle('hover', isInside(center, hI));
+        document.getElementById('house-na').classList.toggle('hover', isInside(center, hNa));
+    }
+
+    function checkDrop(card) {
+        const rect = card.getBoundingClientRect();
+        const center = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+        
+        const hI = document.getElementById('house-i').getBoundingClientRect();
+        const hNa = document.getElementById('house-na').getBoundingClientRect();
+
+        let target = null;
+        if (isInside(center, hI)) target = 'i';
+        else if (isInside(center, hNa)) target = 'na';
+
+        if (target && target === card.dataset.type) {
+            // 正确
+            playSound('ding');
+            card.style.transform = 'scale(0)';
+            setTimeout(() => card.remove(), 200);
+            remaining--;
+            updateCount();
+        } else {
+            // 错误或未放入
+            if (target) playSound('buzz'); // 只有放错房子才响，没放进去不响
+            returnToDesk(card);
+        }
+    }
+
+    function returnToDesk(card) {
+        // 简单复位：取消fixed，变回原样，放回desk容器
+        card.style.transition = 'all 0.3s';
+        card.style.position = 'static'; // 恢复静态流
+        card.style.transform = `rotate(${(Math.random()-0.5)*10}deg)`;
+        card.style.zIndex = 1;
+    }
+
+    function isInside(p, r) {
+        return p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom;
+    }
+
+    init();
+</script>
+</body>
+</html>

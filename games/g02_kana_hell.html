@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日语五十音·地狱特训营</title>
+    <style>
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --dark: #2C3E50;
+            --light: #F7F9FC;
+        }
+
+        body {
+            font-family: "Hiragino Sans", "Meiryo", sans-serif;
+            background-color: var(--light);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--dark);
+        }
+
+        /* 顶部导航 */
+        header {
+            background: var(--dark);
+            color: white;
+            width: 100%;
+            padding: 15px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+        .subtitle { font-size: 0.8rem; opacity: 0.8; margin-top: 5px; }
+
+        /* 模式选择按钮 */
+        .menu {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            background: white;
+            border: 2px solid var(--dark);
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* 游戏主容器 */
+        #game-area {
+            width: 90%;
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            text-align: center;
+            min-height: 400px;
+            position: relative;
+        }
+
+        /* === 模式1：限时闯关 === */
+        .timer-bar {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .timer-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        .big-kana {
+            font-size: 6rem;
+            font-weight: 800;
+            margin: 20px 0;
+            height: 120px;
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .quiz-btn {
+            padding: 15px;
+            font-size: 1.5rem;
+            border: 2px solid #ddd;
+            background: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .quiz-btn:active { transform: scale(0.95); }
+        .quiz-btn.correct { background: #d4edda; border-color: #28a745; color: #155724; }
+        .quiz-btn.wrong { background: #f8d7da; border-color: #dc3545; color: #721c24; animation: shake 0.4s; }
+
+        /* === 模式2：配对连连看 === */
+        .grid-match {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .card {
+            aspect-ratio: 1;
+            background: var(--secondary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            user-select: none;
+        }
+        .card.selected { background: var(--dark); transform: scale(0.9); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .card.matched { visibility: hidden; pointer-events: none; } /* 消除 */
+
+        /* === 模式3：一口气挑战 === */
+        .flow-text {
+            font-size: 2.5rem;
+            line-height: 1.6;
+            text-align: left;
+            letter-spacing: 5px;
+            font-weight: bold;
+            word-break: break-all;
+        }
+        .flow-controls { margin-top: 30px; }
+
+        /* 通用类 */
+        .hidden { display: none !important; }
+        .stats { font-size: 1.2rem; margin-bottom: 10px; color: #666; display: flex; justify-content: space-between;}
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .game-over-modal {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            z-index: 10;
+        }
+        .restart-btn {
+            background: var(--dark);
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>⛩️ 五十音·地狱特训</h1>
+    <div class="subtitle">难度升级 | 易混淆辨析 | 极速配对</div>
+</header>
+
+<div class="menu">
+    <button class="mode-btn active" onclick="switchMode('quiz')">🔥 限时闯关</button>
+    <button class="mode-btn" onclick="switchMode('match')">🧩 记忆配对</button>
+    <button class="mode-btn" onclick="switchMode('flow')">⚡ 一口气挑战</button>
+</div>
+
+<div id="game-area">
+    <div id="mode-quiz">
+        <div class="stats">
+            <span>得分: <b id="score">0</b></span>
+            <span>剩余: <b id="time-left">60</b>s</span>
+        </div>
+        <div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div>
+        
+        <div class="big-kana" id="question-kana">あ</div>
+        <div class="quiz-options" id="quiz-options"></div>
+    </div>
+
+    <div id="mode-match" class="hidden">
+        <div class="stats">
+            <span>剩余卡片: <b id="cards-left">16</b></span>
+        </div>
+        <p style="font-size:0.9rem; color:#888;">点击一个假名，再点击对应的罗马音消除它</p>
+        <div class="grid-match" id="match-grid"></div>
+    </div>
+
+    <div id="mode-flow" class="hidden">
+        <p style="color:#666;">请学生在一口气内读完以下乱序假名：</p>
+        <div class="flow-text" id="flow-content"></div>
+        <div class="flow-controls">
+            <button class="mode-btn" onclick="generateFlow(10)">生成10个</button>
+            <button class="mode-btn" onclick="generateFlow(20)">生成20个</button>
+            <button class="mode-btn" onclick="generateFlow(50)">地狱50连</button>
+        </div>
+    </div>
+
+    <div id="game-over" class="game-over-modal hidden">
+        <h2 id="end-title">时间到！</h2>
+        <p style="font-size: 1.5rem;">最终得分: <b id="end-score" style="color:var(--primary)">0</b></p>
+        <button class="restart-btn" onclick="restartCurrentGame()">再来一局</button>
+    </div>
+</div>
+
+<script>
+    // === 数据准备 ===
+    // 包含易混淆对的数据结构
+    const kanaDB = [
+        { k: 'あ', r: 'a',  sim: ['お', 'め', 'ぬ'] },
+        { k: 'い', r: 'i',  sim: ['り', 'こ'] },
+        { k: 'う', r: 'u',  sim: ['つ', 'ラ'] },
+        { k: 'え', r: 'e',  sim: ['ん', '元'] },
+        { k: 'お', r: 'o',  sim: ['あ', 'む'] },
+        { k: 'か', r: 'ka', sim: ['わ', 'や'] },
+        { k: 'き', r: 'ki', sim: ['さ', 'ち'] },
+        { k: 'く', r: 'ku', sim: ['へ', 'て'] },
+        { k: 'け', r: 'ke', sim: ['は', 'に'] },
+        { k: 'こ', r: 'ko', sim: ['い', 'に'] },
+        { k: 'さ', r: 'sa', sim: ['き', 'ち'] },
+        { k: 'し', r: 'shi',sim: ['つ', 'も'] },
+        { k: 'す', r: 'su', sim: ['む', 'お'] },
+        { k: 'せ', r: 'se', sim: ['サ', '世'] },
+        { k: 'そ', r: 'so', sim: ['ろ', 'る'] },
+        { k: 'た', r: 'ta', sim: ['に', 'な'] },
+        { k: 'ち', r: 'chi',sim: ['さ', 'ら'] },
+        { k: 'つ', r: 'tsu',sim: ['し', 'う'] },
+        { k: 'て', r: 'te', sim: ['と', 'く'] },
+        { k: 'と', r: 'to', sim: ['て', 'ど'] },
+        { k: 'な', r: 'na', sim: ['た', 'は'] },
+        { k: 'に', r: 'ni', sim: ['た', 'こ'] },
+        { k: 'ぬ', r: 'nu', sim: ['め', 'あ'] },
+        { k: 'ね', r: 'ne', sim: ['れ', 'わ'] },
+        { k: 'の', r: 'no', sim: ['め', 'ぬ'] },
+        { k: 'は', r: 'ha', sim: ['ほ', 'け'] },
+        { k: 'ひ', r: 'hi', sim: ['び', 'て'] },
+        { k: 'ふ', r: 'fu', sim: ['ぶ', 'ぷ'] },
+        { k: 'へ', r: 'he', sim: ['く'] },
+        { k: 'ほ', r: 'ho', sim: ['は', 'ま'] },
+        { k: 'ま', r: 'ma', sim: ['ほ', 'も'] },
+        { k: 'み', r: 'mi', sim: ['H', 'n'] },
+        { k: 'む', r: 'mu', sim: ['す', 'お'] },
+        { k: 'め', r: 'me', sim: ['ぬ', 'あ'] },
+        { k: 'も', r: 'mo', sim: ['し', 'ま'] },
+        { k: 'や', r: 'ya', sim: ['か', 'セ'] },
+        { k: 'ゆ', r: 'yu', sim: ['わ'] },
+        { k: 'よ', r: 'yo', sim: ['ま'] },
+        { k: 'ら', r: 'ra', sim: ['ち', '5'] },
+        { k: 'り', r: 'ri', sim: ['い'] },
+        { k: 'る', r: 'ru', sim: ['ろ', 'そ'] },
+        { k: 'れ', r: 're', sim: ['ね', 'わ'] },
+        { k: 'ろ', r: 'ro', sim: ['る', 'そ'] },
+        { k: 'わ', r: 'wa', sim: ['れ', 'ね'] },
+        { k: 'を', r: 'wo', sim: ['ち', 'さ'] },
+        { k: 'ん', r: 'n',  sim: ['え', 'ソ'] }
+    ];
+
+    let currentMode = 'quiz';
+    let score = 0;
+    let timer = null;
+    let timeLeft = 60;
+    let isPlaying = false;
+    
+    // 语音功能
+    function speak(text) {
+        if('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ja-JP'; 
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    // === 切换模式 ===
+    function switchMode(mode) {
+        currentMode = mode;
+        // UI切换
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        document.getElementById('mode-quiz').classList.add('hidden');
+        document.getElementById('mode-match').classList.add('hidden');
+        document.getElementById('mode-flow').classList.add('hidden');
+        document.getElementById(`mode-${mode}`).classList.remove('hidden');
+        document.getElementById('game-over').classList.add('hidden');
+
+        clearInterval(timer);
+        if(mode === 'quiz') startQuizGame();
+        if(mode === 'match') startMatchGame();
+        if(mode === 'flow') generateFlow(10);
+    }
+
+    // ===========================
+    // 模式1：限时闯关逻辑
+    // ===========================
+    function startQuizGame() {
+        score = 0;
+        timeLeft = 60;
+        isPlaying = true;
+        updateStats();
+        nextQuiz();
+        
+        // 倒计时
+        if(timer) clearInterval(timer);
+        timer = setInterval(() => {
+            timeLeft--;
+            updateStats();
+            document.getElementById('timer-fill').style.width = (timeLeft/60*100) + "%";
+            if(timeLeft <= 0) endGame();
+        }, 1000);
+    }
+
+    function updateStats() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('time-left').innerText = timeLeft;
+    }
+
+    function nextQuiz() {
+        if(!isPlaying) return;
+        const target = kanaDB[Math.floor(Math.random() * kanaDB.length)];
+        document.getElementById('question-kana').innerText = target.k;
+        
+        // 难点逻辑：优先混淆项
+        let options = [];
+        options.push(target.r); // 正确答案
+        
+        // 寻找专门的混淆项罗马音
+        // 这里简化逻辑：如果混淆项是假名，我们要找它的罗马音。
+        // 为了代码简单，这里我们从库里找几个非正确的随机罗马音，
+        // 但如果数据库完善，应该通过 sim 字段找到对应的罗马音。
+        // 现在的逻辑：从所有数据中，排除当前答案，随机选3个。
+        // 进阶逻辑（你的要求）：尽可能选长得像的假名对应的罗马音。
+        
+        let pool = kanaDB.filter(i => i.r !== target.r);
+        
+        // 尝试从 target.sim 里找对应的罗马音
+        if(target.sim) {
+            target.sim.forEach(simChar => {
+                const found = kanaDB.find(db => db.k === simChar);
+                if(found && options.length < 4) options.push(found.r);
+            });
+        }
+        
+        // 补足4个选项
+        while(options.length < 4) {
+            const rand = pool[Math.floor(Math.random() * pool.length)];
+            if(!options.includes(rand.r)) options.push(rand.r);
+        }
+        
+        options = options.sort(() => Math.random() - 0.5);
+
+        const container = document.getElementById('quiz-options');
+        container.innerHTML = '';
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'quiz-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkQuiz(btn, opt, target);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkQuiz(btn, selectedRomaji, targetObj) {
+        if(!isPlaying) return;
+        
+        if(selectedRomaji === targetObj.r) {
+            btn.classList.add('correct');
+            score += 10;
+            speak(targetObj.k); // 读出声音
+            setTimeout(nextQuiz, 500);
+        } else {
+            btn.classList.add('wrong');
+            navigator.vibrate(200); // 手机震动
+            score = Math.max(0, score - 5); // 扣分
+            updateStats();
+        }
+        updateStats();
+    }
+
+    function endGame() {
+        isPlaying = false;
+        clearInterval(timer);
+        document.getElementById('game-over').classList.remove('hidden');
+        document.getElementById('end-score').innerText = score;
+    }
+
+    // ===========================
+    // 模式2：配对连连看逻辑
+    // ===========================
+    let matchSelected = null;
+    let cardsLeft = 0;
+
+    function startMatchGame() {
+        const grid = document.getElementById('match-grid');
+        grid.innerHTML = '';
+        matchSelected = null;
+        
+        // 选8对数据 (16张卡)
+        let set = kanaDB.sort(() => Math.random() - 0.5).slice(0, 8);
+        let cards = [];
+        set.forEach(item => {
+            cards.push({ type: 'kana', val: item.k, id: item.r });
+            cards.push({ type: 'romaji', val: item.r, id: item.r });
+        });
+        cards.sort(() => Math.random() - 0.5);
+        
+        cardsLeft = cards.length;
+        document.getElementById('cards-left').innerText = cardsLeft;
+
+        cards.forEach(card => {
+            const el = document.createElement('div');
+            el.className = 'card';
+            el.innerText = card.val;
+            el.dataset.id = card.id; // 匹配的关键
+            el.onclick = () => handleCardClick(el);
+            grid.appendChild(el);
+        });
+    }
+
+    function handleCardClick(el) {
+        if(el.classList.contains('matched') || el === matchSelected) return;
+
+        el.classList.add('selected');
+
+        if(!matchSelected) {
+            // 第一张
+            matchSelected = el;
+        } else {
+            // 第二张，检查匹配
+            if(el.dataset.id === matchSelected.dataset.id) {
+                // 匹配成功
+                setTimeout(() => {
+                    el.classList.add('matched');
+                    matchSelected.classList.add('matched');
+                    matchSelected = null;
+                    cardsLeft -= 2;
+                    document.getElementById('cards-left').innerText = cardsLeft;
+                    speak(el.dataset.id === el.innerText ? "" : el.innerText); // 尝试读出假名
+                    if(cardsLeft === 0) {
+                        alert("🎉 完成！太棒了！");
+                        startMatchGame();
+                    }
+                }, 200);
+            } else {
+                // 匹配失败
+                setTimeout(() => {
+                    el.classList.remove('selected');
+                    matchSelected.classList.remove('selected');
+                    matchSelected = null;
+                }, 500);
+            }
+        }
+    }
+
+    // ===========================
+    // 模式3：一口气挑战逻辑
+    // ===========================
+    function generateFlow(count) {
+        const container = document.getElementById('flow-content');
+        let text = "";
+        for(let i=0; i<count; i++) {
+            text += kanaDB[Math.floor(Math.random() * kanaDB.length)].k;
+        }
+        container.innerText = text;
+    }
+
+    function restartCurrentGame() {
+        document.getElementById('game-over').classList.add('hidden');
+        if(currentMode === 'quiz') startQuizGame();
+        // 其他模式一般不需要这个弹窗，但以防万一
+    }
+
+    // 启动默认
+    startQuizGame();
+
+</script>
+</body>
+</html>

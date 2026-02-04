@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>日语词性大侦探</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            font-family: "M PLUS Rounded 1c", "Microsoft YaHei", sans-serif;
+            background-color: #f3e5f5;
+            background-image: radial-gradient(#e1bee7 2px, transparent 2px);
+            background-size: 20px 20px;
+            overflow: hidden;
+            touch-action: none;
+            height: 100vh;
+        }
+
+        /* 顶部 HUD */
+        #header {
+            position: absolute; top: 15px; left: 15px; right: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 10;
+            border: 3px solid #BA68C8;
+        }
+        .hud-item { font-weight: bold; color: #6A1B9A; font-size: 1.1rem; }
+        .combo-text { color: #FF9800; font-size: 0.9rem; opacity: 0; transition: 0.3s; }
+        .combo-active { opacity: 1; transform: scale(1.2); }
+
+        /* 气泡 (日式团子风格) */
+        .bubble {
+            position: absolute;
+            width: 90px; height: 90px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.15);
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; color: #444; font-size: 1.1rem;
+            cursor: pointer; user-select: none;
+            animation: floatUp linear forwards, wobble 3s ease-in-out infinite;
+            transition: transform 0.1s;
+        }
+        .bubble:active { transform: scale(0.9); }
+        
+        /* 颜色分类 */
+        .bubble[data-style="1"] { border-color: #FF8A80; background: #FFEBEE; }
+        .bubble[data-style="2"] { border-color: #82B1FF; background: #E3F2FD; }
+        .bubble[data-style="3"] { border-color: #B9F6CA; background: #E8F5E9; }
+        .bubble[data-style="4"] { border-color: #FFD180; background: #FFF8E1; }
+
+        @keyframes floatUp { from { bottom: -120px; } to { bottom: 110vh; } }
+        @keyframes wobble { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+
+        /* 结算弹窗 */
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(49, 27, 146, 0.9);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 20; color: white; text-align: center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-box {
+            background: white; color: #333; padding: 30px; border-radius: 25px;
+            width: 80%; max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 5px solid #BA68C8;
+        }
+        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+        .btn {
+            background: linear-gradient(45deg, #AB47BC, #8E24AA);
+            color: white; border: none; padding: 15px 40px;
+            font-size: 1.2rem; border-radius: 50px; margin-top: 20px;
+            cursor: pointer; font-weight: bold; box-shadow: 0 5px 15px rgba(171, 71, 188, 0.4);
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: scale(1.05); }
+
+        /* 浮动文字特效 */
+        .float-text {
+            position: absolute; font-weight: bold; font-size: 1.5rem;
+            pointer-events: none; animation: popUp 0.8s forwards; z-index: 15;
+        }
+        @keyframes popUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-50px) scale(1.5); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <div>
+            <div id="mission-text">🎯 目标: 加载中</div>
+            <div id="combo-display" class="combo-text">🔥 COMBO x0</div>
+        </div>
+        <div class="hud-item" id="score-board">✨ 0</div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <div id="overlay">
+        <div class="modal-box">
+            <h1 id="overlay-title" style="color:#8E24AA; margin-bottom:10px;">🕵️‍♂️ 词性大侦探</h1>
+            <p id="overlay-desc" style="color:#666;">找出屏幕上漂浮的正确单词！</p>
+            
+            <div id="stats-area" style="display:none;">
+                <div class="stat-row"><span>得分</span><span id="stat-score">0</span></div>
+                <div class="stat-row"><span>准确率</span><span id="stat-acc">0%</span></div>
+                <div class="stat-row"><span>最大连击</span><span id="stat-combo">0</span></div>
+                <h2 id="stat-rank" style="color:#FF9800; margin:10px 0;">S级侦探</h2>
+            </div>
+
+            <button class="btn" onclick="nextLevel()">开始行动</button>
+        </div>
+    </div>
+
+<script>
+    // === 音效引擎 (Web Audio API) ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        
+        if (type === 'correct') {
+            // 清脆的叮声 (正弦波)
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'wrong') {
+            // 低沉的噗声 (锯齿波)
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        } else if (type === 'cheer') {
+            // 连击和弦
+            [440, 554, 659].forEach((freq, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g);
+                g.connect(audioCtx.destination);
+                o.type = 'triangle';
+                o.frequency.value = freq;
+                g.gain.setValueAtTime(0.1, now + i*0.05);
+                g.gain.exponentialRampToValueAtTime(0.01, now + 0.6 + i*0.05);
+                o.start(now + i*0.05);
+                o.stop(now + 0.6 + i*0.05);
+            });
+        }
+    }
+
+    // === 游戏数据 ===
+    const levels = [
+        {
+            id: 1, targetName: "副词 (Adverbs)", targetType: "adv",
+            words: [
+                {t:"ゆっくり", type:"adv"}, {t:"とても", type:"adv"}, {t:"ちょっと", type:"adv"}, 
+                {t:"たくさん", type:"adv"}, {t:"全然", type:"adv"}, {t:"猫", type:"noun"}, 
+                {t:"食べる", type:"verb"}, {t:"青い", type:"adj"}, {t:"学校", type:"noun"}, {t:"すぐ", type:"adv"},
+                {t:"必ず", type:"adv"}, {t:"犬", type:"noun"}, {t:"走る", type:"verb"}
+            ]
+        },
+        {
+            id: 2, targetName: "动词 (Verbs)", targetType: "verb",
+            words: [
+                {t:"食べる", type:"verb"}, {t:"行く", type:"verb"}, {t:"勉強する", type:"verb"}, 
+                {t:"見る", type:"verb"}, {t:"泳ぐ", type:"verb"}, {t:"昨日", type:"noun"}, 
+                {t:"静か", type:"adj"}, {t:"私", type:"noun"}, {t:"話す", type:"verb"}, {t:"美しい", type:"adj"},
+                {t:"帰る", type:"verb"}, {t:"飲む", type:"verb"}, {t:"明日", type:"noun"}
+            ]
+        }
+    ];
+
+    let currentLevelIdx = -1;
+    let score = 0;
+    let combo = 0;
+    let maxCombo = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let spawnInterval;
+    let gameActive = false;
+
+    function nextLevel() {
+        currentLevelIdx++;
+        if (currentLevelIdx >= levels.length) {
+            alert("全关卡通关！重置游戏。");
+            currentLevelIdx = -1;
+            location.reload();
+            return;
+        }
+        startGame(levels[currentLevelIdx]);
+    }
+
+    function startGame(level) {
+        // 重置数据
+        score = 0; combo = 0; maxCombo = 0; correctCount = 0; wrongCount = 0;
+        gameActive = true;
+        
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('stats-area').style.display = 'none';
+        document.getElementById('mission-text').innerText = `🎯 找: ${level.targetName}`;
+        document.getElementById('score-board').innerText = "✨ 0";
+        document.getElementById('game-container').innerHTML = '';
+
+        let pool = [...level.words];
+        // 增加干扰项 (复制一份干扰词)
+        pool = pool.concat(level.words.filter(w => w.type !== level.targetType));
+        pool.sort(() => Math.random() - 0.5);
+
+        let i = 0;
+        // 难度递进：第二关生成速度更快
+        const speed = currentLevelIdx === 0 ? 900 : 700;
+
+        spawnInterval = setInterval(() => {
+            if (!gameActive) return;
+            if (i >= pool.length) {
+                clearInterval(spawnInterval);
+                return;
+            }
+            createBubble(pool[i], level.targetType);
+            i++;
+        }, speed);
+
+        // 结束检测
+        const checkEnd = setInterval(() => {
+            if (!gameActive) { clearInterval(checkEnd); return; }
+            const bubbles = document.querySelectorAll('.bubble');
+            // 如果池子空了且屏幕上没气泡了
+            if (i >= pool.length && bubbles.length === 0) {
+                clearInterval(checkEnd);
+                endLevel();
+            }
+        }, 1000);
+    }
+
+    function createBubble(wordObj, targetType) {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        b.innerText = wordObj.t;
+        b.dataset.style = Math.floor(Math.random() * 4) + 1; // 随机颜色
+        b.style.left = Math.random() * (window.innerWidth - 100) + 'px';
+        b.style.animationDuration = (Math.random() * 3 + 4) + 's';
+        
+        b.onmousedown = b.ontouchstart = (e) => {
+            e.preventDefault();
+            if (!gameActive) return;
+            handleInput(b, wordObj.type === targetType, e);
+        };
+
+        document.getElementById('game-container').appendChild(b);
+        b.addEventListener('animationend', () => b.remove());
+    }
+
+    function handleInput(el, isCorrect, e) {
+        const rect = el.getBoundingClientRect();
+        const x = rect.left + rect.width/2;
+        const y = rect.top;
+
+        if (isCorrect) {
+            playSound('correct');
+            score += 10 + combo * 2; // 连击加分
+            combo++;
+            correctCount++;
+            if (combo > maxCombo) maxCombo = combo;
+            
+            showFloatText(x, y, "⭕", "#4CAF50");
+            
+            // 3连击音效
+            if (combo % 3 === 0) {
+                playSound('cheer');
+                showFloatText(x, y - 30, "🔥 COMBO!", "#FF9800");
+            }
+        } else {
+            playSound('wrong');
+            score = Math.max(0, score - 5);
+            combo = 0;
+            wrongCount++;
+            showFloatText(x, y, "❌", "#F44336");
+            // 震动
+            if(navigator.vibrate) navigator.vibrate(200);
+        }
+
+        updateHUD();
+        
+        // 气泡消失动画
+        el.style.transform = "scale(1.4)";
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 200);
+    }
+
+    function updateHUD() {
+        document.getElementById('score-board').innerText = "✨ " + score;
+        const comboDisplay = document.getElementById('combo-display');
+        comboDisplay.innerText = `🔥 COMBO x${combo}`;
+        comboDisplay.className = combo > 1 ? "combo-text combo-active" : "combo-text";
+    }
+
+    function showFloatText(x, y, text, color) {
+        const el = document.createElement('div');
+        el.className = 'float-text';
+        el.innerText = text;
+        el.style.color = color;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    }
+
+    function endLevel() {
+        gameActive = false;
+        const total = correctCount + wrongCount;
+        const acc = total === 0 ? 0 : Math.round((correctCount / total) * 100);
+        
+        let rank = "B级见习";
+        if (acc >= 90) rank = "S级神探 👑";
+        else if (acc >= 70) rank = "A级精英";
+
+        document.getElementById('overlay-title').innerText = "🎉 任务完成";
+        document.getElementById('overlay-desc').innerText = "查看你的侦探报告";
+        document.getElementById('stats-area').style.display = 'block';
+        document.getElementById('stat-score').innerText = score;
+        document.getElementById('stat-acc').innerText = acc + "%";
+        document.getElementById('stat-combo').innerText = maxCombo;
+        document.getElementById('stat-rank').innerText = rank;
+        
+        document.querySelector('.btn').innerText = "下一关";
+        document.getElementById('overlay').style.display = 'flex';
+        playSound('cheer');
+    }
+</script>
+</body>
+<<<<<<< Updated upstream
+</html>
+=======
+</html>
+>>>>>>> Stashed changes

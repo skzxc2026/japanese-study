@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>日语单词消消乐</title>
+    <style>
+        body {
+            background-color: #ffebee;
+            font-family: "黑体", sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #gameContainer {
+            margin: 20px auto;
+            max-width: 1000px;
+        }
+        .word-box {
+            background-color: #f8bbd0;
+            border: 2px solid #f48fb1;
+            border-radius: 10px;
+            display: inline-block;
+            width: 120px;
+            height: 80px;
+            margin: 5px;
+            line-height: 80px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .selected {
+            background-color: #f06292;
+            transform: scale(1.05);
+            color: white;
+        }
+        .matched {
+            opacity: 0;
+            visibility: hidden;
+        }
+        #controls {
+            margin: 20px;
+            padding: 15px;
+            background-color: #fce4ec;
+            border-radius: 10px;
+        }
+        button, select {
+            background-color: #f48fb1;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+        }
+        #timer, #score, #lessonInfo {
+            font-size: 24px;
+            margin: 10px;
+            color: #ad1457;
+        }
+        h1 {
+            color: #880e4f;
+        }
+    </style>
+</head>
+<body>
+    <h1>日语单词消消乐</h1>
+    <div id="controls">
+        <button onclick="startGame()">開始</button>
+        <button onclick="endGame()">終了</button>
+        <select id="lesson">
+            <option value="lesson8">第8课</option>
+            <option value="lesson7">第7课</option>
+            <option value="lesson6">第6课</option>
+        </select>
+        <select id="group">
+            <option value="1">第1组</option>
+            <option value="2">第2组</option>
+            <option value="3">第3组</option>
+        </select>
+        <div id="lessonInfo"></div>
+        <div id="timer">残り時間: 0秒</div>
+        <div id="score">得点: 0</div>
+    </div>
+    <div id="gameContainer"></div>
+
+    <script>
+        let currentPairs = [];
+        let selected = [];
+        let score = 0;
+        let timer;
+        let timeLeft = 0;
+        let currentLesson = '';
+        let currentGroup = '';
+        
+        const wordData = {
+            lesson8: {
+                groups: [
+                    // 第8课第1组(22个单词)
+                    ['いろいろ|多种多样', 'しごと|仕事', 'おじゃま|お邪魔', 'アイディア|主意', 'おや|父母', 
+                     'はなし|話し', 'りょうしん|両親', 'しゅふ|主婦', 'かいしゃいん|会社員', 'うた|歌',
+                     'うんてんしゅ|運転手', 'かんごし|看護師', 'たすける|帮助', 'じぶん|自分', 'まず|首先',
+                     'ないよう|内容', 'よのなか|世の中', 'まわり|周り', 'けいさつかん|警察官', 'こうばん|交番',
+                     'はたらく|働く', 'じゅうみん|住民'],
+                    // 第8课第2组(22个单词)
+                    ['そうだん|相談', 'トラブル|纠纷', 'じこ|事故', 'たいおう|対応', 'あんぜん|安全',
+                     'まもる|守る', 'きしゃ|記者', 'げんば|現場', 'じょうきょう|状況', 'ほうどう|報道',
+                     'たいへん|大変', 'あぶない|危ない', 'ところ|所', 'じけん|事件', 'こくないがい|国内外',
+                     'さまざな|各种各样', 'できごと|出来事', 'すぐに|马上', 'わかる|分かる', 'はいたつ|配達',
+                     'ばん|晩', 'にもつ|荷物'],
+                    // 第8课第3组(22个单词)
+                    ['かんじゃ|患者', 'とどける|届ける', 'おとしより|お年寄り', 'こめ|米', 'おもい|重い',
+                     'せいかつ|生活', 'やくだつ|役立つ', 'やりがい|价值', 'どう|怎样', 'しんねん|新年',
+                     'おちゃ|お茶', 'つめたい|冷たい', 'のみもの|飲み物', 'らいしゅう|来週', 'はっぴょう|発表',
+                     'しんぶん|新聞', 'かいぎ|会議', 'かいしゃ|会社', 'らいげつ|来月', 'れいぞうこ|冷蔵庫',
+                     'まちがえる|間違える', 'ぶんしょう|文章']
+                ],
+                time: 100
+            },
+            lesson7: {
+                groups: [
+                    // 第7课第1组(15个单词)
+                    ['とくい|得意', 'りょうり|料理', 'からい|辛い', 'ちょっと|有点', 'ゆうめい|有名',
+                     'はじめて|初めて', 'まなぶ|学ぶ', 'ポスター|海报', 'トマト|西红柿', 'たまご|鸡蛋',
+                     'いためもの|炒め物', 'えいよう|栄養', 'たっぷり|充足', 'いろ|颜色', 'とくちょう|特徴'],
+                    // 第7课第2组(15个单词)
+                    ['ピーマン|青椒', 'ぶたにく|豚肉', 'たんぱく質|蛋白质', 'ビタミン|维他命', 'ほうふ|豊富',
+                     'ろうどう|労働', 'さいしょ|最初', 'かたい|硬い', 'しおからい|塩辛い', 'アドバイス|建议',
+                     'やっと|终于', 'せいこう|成功', 'しょくざい|食材', 'かしゅ|歌手', 'せかい|世界'],
+                    // 第7课第3组(15个单词)
+                    ['いちばん|一番', 'いんしょう|印象', 'のこる|残る', 'けんがく|見学', 'つかう|使う',
+                     'かんがえる|考える', 'おしえる|教える', 'しかた|仕方', 'いくら|多少钱', 'つく|着く',
+                     'スポーツ|运动', 'こんしゅう|今週', 'こんばん|今晩', 'せつめい|説明', 'さいご|最後']
+                ],
+                time: 80
+            },
+            lesson6: {
+                groups: [
+                    // 第6课第1组(13个单词)
+                    ['よか|余暇', 'かつどう|活動', 'ひま|暇', 'せいしょうねん|青少年', 'センター|中心',
+                     'かかる|花费', 'しょどう|書道', 'しゅうかん|週間', 'バドミントン|羽毛球', 'すいえい|水泳',
+                     'ときどき|偶尔', 'コンサート|音乐会', 'たのしむ|楽しむ'],
+                    // 第6课第2组(13个单词)
+                    ['たいきょくけん|太極拳', 'けいたい|携帯', 'きょうげき|京劇', 'ダンス|舞蹈', 'まいばん|毎晩',
+                     'おどる|踊る', 'あいさつ|挨拶', 'じこしょうかい|自己紹介', 'じんぶつ|人物', 'アニメ|动画片',
+                     'まんが|漫画', 'きんじょ|近所', 'りゆう|理由'],
+                    // 第6课第3组(13个单词)
+                    ['そして|然后', 'こころ|心', 'けんこう|健康', 'たもつ|保つ', 'だいじ|大事',
+                     'また|再，又', 'しゅう|週', 'ビル|大楼', 'テレビ|电视', 'あおい|青い',
+                     'うえ|上', 'じてんしゃ|自転車', 'し|市']
+                ],
+                time: 60
+            }
+        };
+
+        function startGame() {
+            endGame();
+            currentLesson = document.getElementById('lesson').value;
+            currentGroup = document.getElementById('group').value;
+            const groupIndex = parseInt(currentGroup) - 1;
+            
+            // 从当前课程组中随机选择20个单词(如果不足20个则全选)
+            const allWords = [...wordData[currentLesson].groups[groupIndex]];
+            const selectedWords = shuffle(allWords).slice(0, Math.min(20, allWords.length));
+            
+            currentPairs = [];
+            selectedWords.forEach(pair => {
+                const [kana, meaning] = pair.split('|');
+                currentPairs.push({kana, meaning});
+            });
+            
+            createGameBoard();
+            timeLeft = wordData[currentLesson].time;
+            score = 0;
+            updateScore();
+            updateLessonInfo();
+            startTimer();
+        }
+
+        function createGameBoard() {
+            const container = document.getElementById('gameContainer');
+            container.innerHTML = '';
+            
+            // 创建假名卡片
+            const kanaCards = shuffle([...currentPairs]);
+            kanaCards.forEach(pair => {
+                const box = document.createElement('div');
+                box.className = 'word-box';
+                box.textContent = pair.kana;
+                box.dataset.type = 'kana';
+                box.dataset.pair = pair.kana + '|' + pair.meaning;
+                box.onclick = () => selectPair(box);
+                container.appendChild(box);
+            });
+            
+            // 创建含义卡片
+            const meaningCards = shuffle([...currentPairs]);
+            meaningCards.forEach(pair => {
+                const box = document.createElement('div');
+                box.className = 'word-box';
+                box.textContent = pair.meaning;
+                box.dataset.type = 'meaning';
+                box.dataset.pair = pair.kana + '|' + pair.meaning;
+                box.onclick = () => selectPair(box);
+                container.appendChild(box);
+            });
+        }
+
+        function selectPair(box) {
+            if (box.classList.contains('matched')) return;
+            
+            box.classList.add('selected');
+            selected.push(box);
+            
+            if (selected.length === 2) {
+                const first = selected[0];
+                const second = selected[1];
+                
+                // 检查是否一个是假名一个是含义，并且是同一对
+                if (first.dataset.type !== second.dataset.type && 
+                    first.dataset.pair === second.dataset.pair) {
+                    selected.forEach(b => {
+                        b.classList.add('matched');
+                        b.classList.remove('selected');
+                    });
+                    score += 5;
+                    updateScore();
+                    checkGameComplete();
+                } else {
+                    selected.forEach(b => {
+                        setTimeout(() => b.classList.remove('selected'), 500);
+                    });
+                }
+                selected = [];
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timer);
+            document.getElementById('timer').textContent = `残り時間: ${timeLeft}秒`;
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = `残り時間: ${timeLeft}秒`;
+                if (timeLeft <= 0) gameOver();
+            }, 1000);
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = `得点: ${score}`;
+        }
+
+        function updateLessonInfo() {
+            const lessonNames = {
+                'lesson8': '第8课',
+                'lesson7': '第7课',
+                'lesson6': '第6课'
+            };
+            document.getElementById('lessonInfo').textContent = 
+                `${lessonNames[currentLesson]} 第${currentGroup}组 单词数: ${currentPairs.length}`;
+        }
+
+        function checkGameComplete() {
+            const matched = document.querySelectorAll('.matched').length;
+            const total = document.querySelectorAll('.word-box').length;
+            if (matched === total) {
+                gameSuccess();
+            }
+        }
+
+        function gameOver() {
+            clearInterval(timer);
+            alert('時間切れ！');
+        }
+
+        function gameSuccess() {
+            clearInterval(timer);
+            alert(`成功！得分: ${score}`);
+        }
+
+        function endGame() {
+            clearInterval(timer);
+            document.getElementById('gameContainer').innerHTML = '';
+            document.getElementById('timer').textContent = '残り時間: 0秒';
+        }
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日语词性传送带</title>
+    <style>
+        :root {
+            --noun-color: #ff9ff3; /* 名词-兔-粉 */
+            --part-color: #54a0ff; /* 助词-猫-蓝 */
+            --adv-color: #feca57;  /* 副词-狗-黄 */
+            --verb-color: #1dd1a1; /* 动词-熊-绿 */
+            --belt-speed: 2s;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            font-family: "Microsoft YaHei", sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 顶部状态栏 */
+        .header {
+            height: 50px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+        .stat-box { font-weight: bold; color: #555; display: flex; align-items: center; gap: 5px; }
+        .heart { color: #ff4757; }
+
+        /* 游戏主区域 */
+        #game-stage {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+
+        /* 萌宠分类区 (顶部) */
+        .animal-zones {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 5px;
+            background: rgba(255,255,255,0.5);
+        }
+
+        .zone {
+            width: 22%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        
+        .avatar {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 3px 0 rgba(0,0,0,0.1));
+            z-index: 2;
+        }
+        
+        .box {
+            width: 100%;
+            height: 60px;
+            border-radius: 10px;
+            margin-top: -10px;
+            padding-top: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1rem;
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2);
+            border: 2px solid transparent;
+        }
+
+        /* 分类样式 */
+        .zone[data-type="noun"] .box { background: var(--noun-color); }
+        .zone[data-type="particle"] .box { background: var(--part-color); }
+        .zone[data-type="adverb"] .box { background: var(--adv-color); }
+        .zone[data-type="verb"] .box { background: var(--verb-color); }
+
+        .zone.hover { transform: scale(1.1); }
+        .zone.hover .box { border-color: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+
+        /* 传送带区域 (底部) */
+        .conveyor-belt {
+            height: 140px;
+            background: #576574;
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-top: 5px solid #222f3e;
+            border-bottom: 5px solid #222f3e;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* 传送带纹理动画 */
+        .belt-track {
+            position: absolute;
+            top: 0; left: 0; width: 200%; height: 100%;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 40px,
+                rgba(0,0,0,0.1) 40px,
+                rgba(0,0,0,0.1) 44px
+            );
+            animation: scrollBelt 2s linear infinite;
+        }
+
+        /* 危险区域警示线 */
+        .danger-zone {
+            position: absolute;
+            left: 0; top: 0; height: 100%; width: 80px;
+            background: linear-gradient(to right, rgba(255,0,0,0.3), transparent);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes scrollBelt {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); } /* 向左滚动 */
+        }
+
+        /* 单词卡片 */
+        .word-card {
+            position: absolute;
+            background: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1rem;
+            cursor: grab;
+            white-space: nowrap;
+            z-index: 10;
+            top: 40px; /* 在传送带中间 */
+            user-select: none;
+        }
+
+        .word-card:active { cursor: grabbing; }
+
+        .word-card.dragging {
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            transform: scale(1.1) rotate(-3deg);
+            z-index: 100;
+            opacity: 0.9;
+        }
+
+        /* 濒死闪烁动画 */
+        .word-card.danger {
+            animation: flashRed 0.5s infinite;
+            color: red;
+            border: 2px solid red;
+        }
+
+        @keyframes flashRed {
+            0%, 100% { background: white; }
+            50% { background: #ffcccc; }
+        }
+
+        /* 遮罩层 */
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+        .btn {
+            background: #ff6b6b; color: white; border: none; padding: 15px 50px;
+            font-size: 1.5rem; border-radius: 50px; cursor: pointer;
+            margin-top: 30px; font-weight: bold;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* 浮动得分 */
+        .float-score {
+            position: absolute;
+            font-weight: bold;
+            font-size: 1.5rem;
+            pointer-events: none;
+            animation: floatUp 0.8s forwards;
+            z-index: 999;
+        }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="stat-box">
+            <i class="fas fa-star" style="color:#f1c40f"></i> <span id="score">0</span>
+        </div>
+        <div class="stat-box">
+            <span style="font-size:0.8rem; color:#999">SPEED: <span id="speed-display">1.0</span>x</span>
+        </div>
+        <div class="stat-box">
+            <i class="fas fa-heart heart"></i> <span id="lives">5</span>
+        </div>
+    </div>
+
+    <div id="game-stage">
+        <!-- 萌宠分类区 -->
+        <div class="animal-zones">
+            <div class="zone" data-type="noun">
+                <div class="avatar">🐰</div>
+                <div class="box">名词</div>
+            </div>
+            <div class="zone" data-type="particle">
+                <div class="avatar">🐱</div>
+                <div class="box">助词</div>
+            </div>
+            <div class="zone" data-type="adverb">
+                <div class="avatar">🐶</div>
+                <div class="box">副词</div>
+            </div>
+            <div class="zone" data-type="verb">
+                <div class="avatar">🐻</div>
+                <div class="box">动词</div>
+            </div>
+        </div>
+
+        <!-- 传送带 -->
+        <div class="conveyor-belt" id="belt">
+            <div class="belt-track"></div>
+            <div class="danger-zone"></div>
+            <!-- 单词卡片会生成在这里 -->
+        </div>
+    </div>
+
+    <!-- 遮罩 -->
+    <div id="overlay">
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px;">📦 词性传送带</h1>
+        <p style="color:#ccc; font-size: 1.1rem; max-width: 80%;">
+            单词正在被运往粉碎机！<br>
+            快把它们拖给正确的小动物！
+        </p>
+        <div style="display:flex; gap:15px; margin-top:20px; font-size:0.9rem; opacity:0.8">
+            <span>🐰 名词</span>
+            <span>🐱 助词</span>
+            <span>🐶 副词</span>
+            <span>🐻 动词</span>
+        </div>
+        <button class="btn" onclick="startGame()">开始挑战</button>
+    </div>
+
+<script>
+    // === 1. 词库 (AI 生成) ===
+    const WORD_DB = [
+        // 名词 (Noun)
+        { w: "猫", t: "noun" }, { w: "学校", t: "noun" }, { w: "明日", t: "noun" },
+        { w: "映画", t: "noun" }, { w: "音楽", t: "noun" }, { w: "水", t: "noun" },
+        { w: "銀行", t: "noun" }, { w: "部屋", t: "noun" }, { w: "先生", t: "noun" },
+        { w: "日本", t: "noun" }, { w: "手紙", t: "noun" }, { w: "天気", t: "noun" },
+        { w: "野菜", t: "noun" }, { w: "携帯", t: "noun" }, { w: "電車", t: "noun" },
+        
+        // 助词 (Particle)
+        { w: "は", t: "particle" }, { w: "が", t: "particle" }, { w: "を", t: "particle" },
+        { w: "に", t: "particle" }, { w: "で", t: "particle" }, { w: "へ", t: "particle" },
+        { w: "と", t: "particle" }, { w: "から", t: "particle" }, { w: "まで", t: "particle" },
+        { w: "より", t: "particle" }, { w: "の", t: "particle" }, { w: "や", t: "particle" },
+        
+        // 副词 (Adverb)
+        { w: "とても", t: "adverb" }, { w: "たぶん", t: "adverb" }, { w: "すぐ", t: "adverb" },
+        { w: "ゆっくり", t: "adverb" }, { w: "全然", t: "adverb" }, { w: "もっと", t: "adverb" },
+        { w: "ちょうど", t: "adverb" }, { w: "きっと", t: "adverb" }, { w: "まだ", t: "adverb" },
+        { w: "いつも", t: "adverb" }, { w: "時々", t: "adverb" }, { w: "少し", t: "adverb" },
+        
+        // 动词 (Verb)
+        { w: "食べる", t: "verb" }, { w: "行く", t: "verb" }, { w: "見る", t: "verb" },
+        { w: "寝る", t: "verb" }, { w: "勉強する", t: "verb" }, { w: "帰る", t: "verb" },
+        { w: "飲む", t: "verb" }, { w: "話す", t: "verb" }, { w: "泳ぐ", t: "verb" },
+        { w: "買う", t: "verb" }, { w: "待つ", t: "verb" }, { w: "遊ぶ", t: "verb" },
+        { w: "来る", t: "verb" }, { w: "する", t: "verb" }, { w: "書く", t: "verb" }
+    ];
+
+    // === 2. 游戏状态 ===
+    let state = {
+        isPlaying: false,
+        score: 0,
+        lives: 5,
+        speed: 1.5, // 像素/帧
+        spawnRate: 120, // 帧数间隔
+        frameCount: 0,
+        activeWords: [] // 存放当前屏幕上的单词对象
+    };
+
+    let animationId;
+    const beltEl = document.getElementById('belt');
+
+    // === 3. 音效 ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'correct') {
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.linearRampToValueAtTime(1000, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
+    }
+
+    // === 4. 核心循环 ===
+    function startGame() {
+        document.getElementById('overlay').style.display = 'none';
+        
+        // 重置状态
+        state.isPlaying = true;
+        state.score = 0;
+        state.lives = 5;
+        state.speed = 1.0;
+        state.spawnRate = 120;
+        state.frameCount = 0;
+        state.activeWords.forEach(w => w.el.remove());
+        state.activeWords = [];
+
+        updateUI();
+        gameLoop();
+    }
+
+    function gameLoop() {
+        if (!state.isPlaying) return;
+
+        state.frameCount++;
+
+        // 1. 生成新单词
+        if (state.frameCount % Math.floor(state.spawnRate) === 0) {
+            spawnWord();
+        }
+
+        // 2. 增加难度 (每600帧加速一次)
+        if (state.frameCount % 600 === 0) {
+            state.speed += 0.2;
+            state.spawnRate = Math.max(40, state.spawnRate - 5); // 最小间隔40帧
+            updateUI();
+        }
+
+        // 3. 移动单词
+        moveWords();
+
+        animationId = requestAnimationFrame(gameLoop);
+    }
+
+    function spawnWord() {
+        const data = WORD_DB[Math.floor(Math.random() * WORD_DB.length)];
+        const el = document.createElement('div');
+        el.className = 'word-card';
+        el.textContent = data.w;
+        
+        // 初始位置：传送带最右侧
+        const startX = beltEl.offsetWidth;
+        el.style.left = startX + 'px';
+        
+        beltEl.appendChild(el);
+
+        const wordObj = {
+            el: el,
+            type: data.t,
+            x: startX,
+            isDragging: false,
+            width: 0 // 稍后获取
+        };
+
+        // 绑定拖拽
+        initDraggable(wordObj);
+        
+        state.activeWords.push(wordObj);
+    }
+
+    function moveWords() {
+        // 倒序遍历，方便删除
+        for (let i = state.activeWords.length - 1; i >= 0; i--) {
+            const word = state.activeWords[i];
+            
+            // 如果正在被拖拽，不随传送带移动
+            if (word.isDragging) continue;
+
+            // 移动逻辑
+            word.x -= state.speed;
+            word.el.style.left = word.x + 'px';
+
+            // 获取宽度用于判断边界
+            if (word.width === 0) word.width = word.el.offsetWidth;
+
+            // 警示逻辑 (接近左侧)
+            if (word.x < 80) {
+                word.el.classList.add('danger');
+            }
+
+            // 越界判定 (完全离开左侧)
+            if (word.x + word.width < 0) {
+                handleMiss(word, i);
+            }
+        }
+    }
+
+    function handleMiss(word, index) {
+        word.el.remove();
+        state.activeWords.splice(index, 1);
+        loseLife();
+    }
+
+    function loseLife() {
+        state.lives--;
+        playSound('wrong');
+        updateUI();
+        
+        // 屏幕闪红
+        document.body.style.background = '#ffcccc';
+        setTimeout(() => document.body.style.background = '#f0f2f5', 100);
+
+        if (state.lives <= 0) {
+            gameOver();
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('score').innerText = state.score;
+        document.getElementById('lives').innerText = state.lives;
+        document.getElementById('speed-display').innerText = state.speed.toFixed(1);
+    }
+
+    // === 5. 拖拽逻辑 (关键) ===
+    let dragOffset = { x: 0, y: 0 };
+    let currentDragWord = null;
+
+    function initDraggable(wordObj) {
+        const startDrag = (e) => {
+            if (!state.isPlaying) return;
+            e.preventDefault(); // 防止滚动
+
+            currentDragWord = wordObj;
+            wordObj.isDragging = true;
+            wordObj.el.classList.add('dragging');
+
+            // 切换坐标系：从 belt 内部绝对定位 -> body 绝对定位
+            // 这样拖拽时可以离开传送带区域
+            const rect = wordObj.el.getBoundingClientRect();
+            wordObj.el.style.position = 'fixed'; // 变成 fixed
+            wordObj.el.style.left = rect.left + 'px';
+            wordObj.el.style.top = rect.top + 'px';
+            document.body.appendChild(wordObj.el); // 移到 body 下
+
+            const point = e.touches ? e.touches[0] : e;
+            dragOffset.x = point.clientX - rect.left;
+            dragOffset.y = point.clientY - rect.top;
+
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchend', endDrag);
+        };
+
+        wordObj.el.addEventListener('mousedown', startDrag);
+        wordObj.el.addEventListener('touchstart', startDrag, { passive: false });
+    }
+
+    function onDrag(e) {
+        if (!currentDragWord) return;
+        e.preventDefault();
+        
+        const point = e.touches ? e.touches[0] : e;
+        const x = point.clientX - dragOffset.x;
+        const y = point.clientY - dragOffset.y;
+
+        currentDragWord.el.style.left = x + 'px';
+        currentDragWord.el.style.top = y + 'px';
+
+        checkHover(point.clientX, point.clientY);
+    }
+
+    function endDrag(e) {
+        if (!currentDragWord) return;
+
+        const rect = currentDragWord.el.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        const target = getTargetZone(centerX, centerY);
+
+        if (target) {
+            // 命中盒子
+            if (target.dataset.type === currentDragWord.type) {
+                // 正确
+                handleCorrect(currentDragWord, target);
+            } else {
+                // 错误
+                handleWrong(currentDragWord);
+            }
+        } else {
+            // 没放进盒子 -> 放回传送带
+            returnToBelt(currentDragWord);
+        }
+
+        // 清理事件
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('mouseup', endDrag);
+        document.removeEventListener('touchend', endDrag);
+        
+        document.querySelectorAll('.zone').forEach(z => z.classList.remove('hover'));
+        currentDragWord = null;
+    }
+
+    function checkHover(x, y) {
+        document.querySelectorAll('.zone').forEach(z => {
+            const r = z.getBoundingClientRect();
+            if (x > r.left && x < r.right && y > r.top && y < r.bottom) {
+                z.classList.add('hover');
+            } else {
+                z.classList.remove('hover');
+            }
+        });
+    }
+
+    function getTargetZone(x, y) {
+        let target = null;
+        document.querySelectorAll('.zone').forEach(z => {
+            const r = z.getBoundingClientRect();
+            if (x > r.left && x < r.right && y > r.top && y < r.bottom) {
+                target = z;
+            }
+        });
+        return target;
+    }
+
+    // === 6. 判定逻辑 ===
+
+    function handleCorrect(wordObj, zone) {
+        playSound('correct');
+        state.score += 10;
+        updateUI();
+        showFloatText(zone, "+10");
+
+        // 移除数据
+        const idx = state.activeWords.indexOf(wordObj);
+        if (idx > -1) state.activeWords.splice(idx, 1);
+        wordObj.el.remove();
+    }
+
+    function handleWrong(wordObj) {
+        loseLife();
+        showFloatText(wordObj.el, "❌");
+        
+        // 移除数据
+        const idx = state.activeWords.indexOf(wordObj);
+        if (idx > -1) state.activeWords.splice(idx, 1);
+        wordObj.el.remove();
+    }
+
+    function returnToBelt(wordObj) {
+        // 恢复状态
+        wordObj.isDragging = false;
+        wordObj.el.classList.remove('dragging');
+        
+        // 放回 belt DOM 结构
+        wordObj.el.style.position = 'absolute';
+        wordObj.el.style.top = '40px'; // 恢复高度
+        wordObj.el.style.left = wordObj.x + 'px'; // 恢复 X 轴位置
+        beltEl.appendChild(wordObj.el);
+    }
+
+    function showFloatText(targetEl, text) {
+        const rect = targetEl.getBoundingClientRect();
+        const floatEl = document.createElement('div');
+        floatEl.className = 'float-score';
+        floatEl.innerText = text;
+        floatEl.style.left = (rect.left + rect.width/2 - 20) + 'px';
+        floatEl.style.top = rect.top + 'px';
+        floatEl.style.color = text === '❌' ? 'red' : '#2ecc71';
+        document.body.appendChild(floatEl);
+        setTimeout(() => floatEl.remove(), 800);
+    }
+
+    function gameOver() {
+        state.isPlaying = false;
+        cancelAnimationFrame(animationId);
+        
+        const overlay = document.getElementById('overlay');
+        overlay.innerHTML = `
+            <h1 style="font-size:3rem">💀 游戏结束</h1>
+            <p style="font-size:1.5rem">最终得分: <span style="color:#f1c40f">${state.score}</span></p>
+            <button class="btn" onclick="startGame()">再试一次</button>
+        `;
+        overlay.style.display = 'flex';
+    }
+
+</script>
+</body>
+</html>

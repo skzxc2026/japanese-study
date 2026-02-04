@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>动词分类工厂</title>
+    <style>
+        :root {
+            --g1-color: #4facfe; /* 一类 - 蓝 */
+            --g2-color: #f6d365; /* 二类 - 黄 */
+            --g3-color: #ff9a9e; /* 三类 - 粉 */
+            --bg-color: #f0f4f8;
+            --text-color: #2d3436;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-color);
+            font-family: "Microsoft YaHei", sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 顶部栏 */
+        .header {
+            background: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+        .score-board { font-size: 1rem; font-weight: bold; color: #555; }
+        .score-val { color: #00b894; font-size: 1.3rem; margin-left: 5px; }
+
+        /* 游戏主区域 */
+        #game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 分类盒子区域 - 高度固定，防止被撑开 */
+        .drop-zones {
+            display: flex;
+            gap: 8px;
+            height: 40%; /* 占据上方空间 */
+            min-height: 200px;
+        }
+
+        .zone {
+            flex: 1;
+            border-radius: 12px;
+            border: 2px dashed rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column; /* 标题在顶，内容在下 */
+            align-items: center;
+            padding: 5px;
+            transition: all 0.3s;
+            position: relative;
+            background: rgba(255,255,255,0.6);
+            overflow: hidden;
+        }
+
+        /* 盒子标题 */
+        .zone-header {
+            width: 100%;
+            text-align: center;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            margin-bottom: 5px;
+            flex-shrink: 0;
+        }
+        .zone h3 { margin: 5px 0 2px 0; font-size: 0.9rem; }
+        .zone .desc { font-size: 0.65rem; color: #666; display: block; }
+
+        /* 盒子内容区 - 允许滚动，使用 Flex Wrap 让标签紧凑排列 */
+        .zone-content {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start; /* 内容从上往下堆叠 */
+            justify-content: center;
+            gap: 4px;
+            overflow-y: auto; /* 内容多了可以滚 */
+        }
+        
+        /* 盒子颜色主题 */
+        .zone[data-type="1"] { background: #e3f2fd; border-color: var(--g1-color); }
+        .zone[data-type="1"] h3 { color: #1565c0; }
+        
+        .zone[data-type="2"] { background: #fffde7; border-color: var(--g2-color); }
+        .zone[data-type="2"] h3 { color: #fbc02d; }
+        
+        .zone[data-type="3"] { background: #ffebee; border-color: var(--g3-color); }
+        .zone[data-type="3"] h3 { color: #c62828; }
+
+        .zone.drag-over { transform: scale(1.02); background: white; border-style: solid; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+
+        /* 待分类卡片区域 */
+        #card-pool {
+            flex: 1;
+            background: white;
+            border-radius: 15px 15px 0 0;
+            padding: 20px 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            justify-content: center;
+            gap: 12px;
+            overflow-y: auto;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+        }
+
+        /* === 原始大卡片样式 === */
+        .card {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 0 #e0e0e0; /* 3D按钮感 */
+            border: 1px solid #eee;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--text-color);
+            cursor: grab;
+            touch-action: none;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+        }
+        .card:active { box-shadow: none; transform: translateY(4px); }
+        .card span.sub { font-size: 0.75rem; color: #999; margin-top: 2px; font-weight: normal; }
+
+        /* === 拖拽时的样式 (克隆体) === */
+        .card.dragging-clone {
+            position: fixed;
+            z-index: 999;
+            opacity: 0.9;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            transform: scale(1.1) rotate(-3deg);
+            pointer-events: none;
+            background: #fff;
+        }
+
+        /* === 放入盒子后的迷你胶囊样式 (关键修改) === */
+        .mini-tag {
+            background: rgba(255,255,255,0.8);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #333;
+            border: 1px solid rgba(0,0,0,0.1);
+            display: inline-flex;
+            align-items: center;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            cursor: default;
+        }
+        /* 根据分类给标签文字上色 */
+        .zone[data-type="1"] .mini-tag { color: #1565c0; }
+        .zone[data-type="2"] .mini-tag { color: #f9a825; }
+        .zone[data-type="3"] .mini-tag { color: #c62828; }
+
+        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+        /* 遮罩层 */
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 30px;
+        }
+        .btn {
+            background: var(--g1-color); color: white; border: none; padding: 15px 50px;
+            font-size: 1.2rem; border-radius: 50px; cursor: pointer;
+            margin-top: 30px; box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+            font-weight: bold;
+        }
+
+        /* 手机适配 */
+        @media (max-width: 600px) {
+            .drop-zones { flex-direction: column; height: 55%; gap: 5px; }
+            .zone { flex-direction: row; align-items: center; padding: 0 10px; }
+            .zone-header { width: auto; border-bottom: none; margin: 0; padding: 0; text-align: left; margin-right: 10px; min-width: 70px; }
+            .zone h3 { font-size: 0.85rem; }
+            .zone .desc { display: none; } /* 手机隐藏描述 */
+            .zone-content { justify-content: flex-start; align-items: center; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+            .mini-tag { font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="score-board">进度 <span id="progress" class="score-val">0/20</span></div>
+        <div class="score-board">得分 <span id="score" class="score-val">0</span></div>
+    </div>
+
+    <div id="game-area">
+        <!-- 分类盒子 -->
+        <div class="drop-zones">
+            <div class="zone" data-type="1">
+                <div class="zone-header">
+                    <h3>一类动词</h3>
+                    <span class="desc">五段 / う段</span>
+                </div>
+                <div class="zone-content"></div>
+            </div>
+            <div class="zone" data-type="2">
+                <div class="zone-header">
+                    <h3>二类动词</h3>
+                    <span class="desc">一段 / いる・える</span>
+                </div>
+                <div class="zone-content"></div>
+            </div>
+            <div class="zone" data-type="3">
+                <div class="zone-header">
+                    <h3>三类动词</h3>
+                    <span class="desc">する / くる</span>
+                </div>
+                <div class="zone-content"></div>
+            </div>
+        </div>
+
+        <!-- 卡片池 -->
+        <div id="card-pool"></div>
+    </div>
+
+    <!-- 遮罩 -->
+    <div id="overlay">
+        <h1 style="color:#333; margin-bottom:10px">🏭 动词分类工厂</h1>
+        <p style="color:#777;">拖拽卡片到正确的分类框<br>完成后卡片会变成小标签</p>
+        <button class="btn" onclick="startGame()">开始上班</button>
+    </div>
+
+<script>
+    // === 数据 ===
+    const VERB_DB = [
+        { w: "行く", k: "いく", t: 1 }, { w: "飲む", k: "のむ", t: 1 }, 
+        { w: "読む", k: "よむ", t: 1 }, { w: "遊ぶ", k: "あそぶ", t: 1 },
+        { w: "待つ", k: "まつ", t: 1 }, { w: "買う", k: "かう", t: 1 },
+        { w: "話す", k: "はなす", t: 1 }, { w: "泳ぐ", k: "およぐ", t: 1 },
+        // 陷阱
+        { w: "帰る", k: "かえる", t: 1 }, { w: "切る", k: "きる", t: 1 },
+        { w: "知る", k: "しる", t: 1 }, { w: "入る", k: "はいる", t: 1 },
+        { w: "走る", k: "はしる", t: 1 },
+        // 二类
+        { w: "食べる", k: "たべる", t: 2 }, { w: "見る", k: "みる", t: 2 },
+        { w: "寝る", k: "ねる", t: 2 }, { w: "起きる", k: "おきる", t: 2 },
+        { w: "教える", k: "おしえる", t: 2 }, { w: "借りる", k: "かりる", t: 2 },
+        { w: "考える", k: "かんがえる", t: 2 }, { w: "着る", k: "きる", t: 2 },
+        // 三类
+        { w: "する", k: "する", t: 3 }, { w: "来る", k: "くる", t: 3 },
+        { w: "勉強する", k: "べんきょう", t: 3 }, { w: "散歩する", k: "さんぽ", t: 3 }
+    ];
+
+    // === 音效 ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'pop') {
+            osc.frequency.setValueAtTime(600, now);
+            gain.gain.setValueAtTime(0.1, now);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'correct') {
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        }
+    }
+
+    // === 游戏逻辑 ===
+    let score = 0;
+    let completedCount = 0;
+    const TOTAL_CARDS = 20;
+
+    function startGame() {
+        document.getElementById('overlay').style.display = 'none';
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        score = 0;
+        completedCount = 0;
+        updateUI();
+        
+        // 清空旧数据
+        document.querySelectorAll('.zone-content').forEach(el => el.innerHTML = '');
+        const pool = document.getElementById('card-pool');
+        pool.innerHTML = '';
+
+        // 生成卡片
+        const shuffled = [...VERB_DB].sort(() => Math.random() - 0.5).slice(0, TOTAL_CARDS);
+        shuffled.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `${item.w}<span class="sub">${item.k}</span>`;
+            card.dataset.type = item.t;
+            card.dataset.word = item.w; // 存一下纯文本
+            initDraggable(card);
+            pool.appendChild(card);
+        });
+    }
+
+    function updateUI() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('progress').innerText = `${completedCount}/${TOTAL_CARDS}`;
+    }
+
+    // === 拖拽逻辑 ===
+    let activeCard = null;
+    let cloneCard = null;
+    let startX, startY;
+
+    function initDraggable(card) {
+        card.addEventListener('mousedown', onStart);
+        card.addEventListener('touchstart', onStart, { passive: false });
+    }
+
+    function onStart(e) {
+        e.preventDefault();
+        playSound('pop');
+        
+        activeCard = e.currentTarget;
+        const point = e.touches ? e.touches[0] : e;
+        startX = point.clientX;
+        startY = point.clientY;
+
+        // 1. 创建克隆体 (用于跟随手指)
+        cloneCard = activeCard.cloneNode(true);
+        cloneCard.classList.add('dragging-clone');
+        
+        // 设置克隆体初始位置
+        const rect = activeCard.getBoundingClientRect();
+        cloneCard.style.width = rect.width + 'px';
+        cloneCard.style.height = rect.height + 'px';
+        cloneCard.style.left = rect.left + 'px';
+        cloneCard.style.top = rect.top + 'px';
+        document.body.appendChild(cloneCard);
+
+        // 2. 隐藏原卡片 (关键修改：完全透明，解决“遮挡”问题)
+        activeCard.style.opacity = '0';
+
+        // 绑定移动事件
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchend', onEnd);
+    }
+
+    function onMove(e) {
+        if (!cloneCard) return;
+        e.preventDefault();
+        const point = e.touches ? e.touches[0] : e;
+        const dx = point.clientX - startX;
+        const dy = point.clientY - startY;
+
+        // 移动克隆体
+        cloneCard.style.transform = `translate(${dx}px, ${dy}px) rotate(-5deg) scale(1.1)`;
+        
+        // 高亮检测
+        checkHover(point.clientX, point.clientY);
+    }
+
+    function onEnd(e) {
+        if (!cloneCard) return;
+
+        // 获取放置点
+        const rect = cloneCard.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const targetZone = getDropTarget(centerX, centerY);
+
+        if (targetZone) {
+            handleDrop(targetZone);
+        } else {
+            // 没放进盒子，原卡片恢复显示
+            activeCard.style.opacity = '1';
+            playSound('wrong');
+        }
+
+        // 清理
+        cloneCard.remove();
+        cloneCard = null;
+        activeCard = null;
+        document.querySelectorAll('.zone').forEach(z => z.classList.remove('drag-over'));
+        
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchend', onEnd);
+    }
+
+    function checkHover(x, y) {
+        document.querySelectorAll('.zone').forEach(zone => {
+            const rect = zone.getBoundingClientRect();
+            if (x > rect.left && x < rect.right && y > rect.top && y < rect.bottom) {
+                zone.classList.add('drag-over');
+            } else {
+                zone.classList.remove('drag-over');
+            }
+        });
+    }
+
+    function getDropTarget(x, y) {
+        let target = null;
+        document.querySelectorAll('.zone').forEach(zone => {
+            const rect = zone.getBoundingClientRect();
+            if (x > rect.left && x < rect.right && y > rect.top && y < rect.bottom) {
+                target = zone;
+            }
+        });
+        return target;
+    }
+
+    function handleDrop(zone) {
+        const cardType = parseInt(activeCard.dataset.type);
+        const zoneType = parseInt(zone.dataset.type);
+
+        if (cardType === zoneType) {
+            // === 正确：变身小标签 ===
+            playSound('correct');
+            score += 10;
+            completedCount++;
+            
+            // 1. 创建迷你标签 (关键修改：只显示汉字，体积很小)
+            const miniTag = document.createElement('div');
+            miniTag.className = 'mini-tag';
+            miniTag.textContent = activeCard.dataset.word; // 只取汉字
+            
+            // 2. 放入盒子的内容区
+            zone.querySelector('.zone-content').appendChild(miniTag);
+            
+            // 3. 彻底移除原卡片
+            activeCard.remove();
+            
+            checkWin();
+        } else {
+            // === 错误 ===
+            playSound('wrong');
+            score = Math.max(0, score - 5);
+            activeCard.style.opacity = '1'; // 恢复显示
+            // 简单震动反馈
+            activeCard.style.transition = 'transform 0.1s';
+            activeCard.style.transform = 'translateX(10px)';
+            setTimeout(() => activeCard.style.transform = 'translateX(-10px)', 100);
+            setTimeout(() => activeCard.style.transform = 'none', 200);
+        }
+        updateUI();
+    }
+
+    function checkWin() {
+        if (completedCount >= TOTAL_CARDS) {
+            setTimeout(() => {
+                document.querySelector('#overlay h1').textContent = "🎉 完美分类！";
+                document.querySelector('#overlay p').innerHTML = `最终得分: <b style="color:#00b894;font-size:1.5rem">${score}</b>`;
+                document.querySelector('.btn').textContent = "再来一局";
+                document.getElementById('overlay').style.display = 'flex';
+            }, 500);
+        }
+    }
+</script>
+</body>
+</html>

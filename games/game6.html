@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日语助词大闯关</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* 顶部栏 */
+        .header {
+            width: 100%;
+            background: #fff;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .header h2 { margin: 0; color: #2c3e50; font-size: 1.2rem; }
+        .progress-text { font-size: 0.9rem; color: #666; margin-top: 5px; }
+
+        /* 主容器 */
+        .container {
+            width: 90%;
+            max-width: 600px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+
+        /* 关卡选择菜单 */
+        #level-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+        .level-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid #e0e0e0;
+            transition: 0.2s;
+        }
+        .level-card:hover { border-color: #3498db; transform: translateY(-3px); }
+        .level-card.locked { opacity: 0.6; pointer-events: none; background: #eee; }
+        .level-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
+        .level-desc { font-size: 0.8rem; color: #7f8c8d; }
+
+        /* 游戏区域 */
+        #game-area { display: none; width: 100%; flex-direction: column; align-items: center; }
+        
+        .scene-box {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            animation: bounce 2s infinite;
+        }
+        
+        .sentence-box {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 100%;
+            text-align: center;
+            font-size: 1.4rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            position: relative;
+            box-sizing: border-box;
+        }
+        
+        .blank {
+            display: inline-block;
+            min-width: 50px;
+            border-bottom: 3px solid #3498db;
+            color: #3498db;
+            padding: 0 5px;
+            font-weight: bold;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .option-btn {
+            background: white;
+            border: 2px solid #bdc3c7;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            font-family: "Microsoft YaHei", sans-serif;
+            transition: 0.2s;
+        }
+        .option-btn:hover { background: #ecf0f1; }
+        .option-btn.correct { background: #2ecc71; color: white; border-color: #27ae60; }
+        .option-btn.wrong { background: #e74c3c; color: white; border-color: #c0392b; }
+
+        /* 解析弹窗 */
+        .feedback-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 10px;
+            border-left: 5px solid #ffc107;
+            width: 100%;
+            box-sizing: border-box;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        .feedback-title { font-weight: bold; margin-bottom: 5px; display: block; }
+        .feedback-content { font-size: 0.9rem; color: #555; }
+
+        /* 结算页面 */
+        #result-area { display: none; text-align: center; width: 100%; }
+        .score-circle {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: #3498db;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0 auto 20px;
+        }
+        
+        .mistake-list {
+            text-align: left;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .mistake-item { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .mistake-item:last-child { border-bottom: none; }
+
+        .btn {
+            background: #3498db; color: white; border: none;
+            padding: 12px 30px; border-radius: 25px;
+            font-size: 1rem; cursor: pointer; margin-top: 20px;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .btn-outline { background: transparent; border: 2px solid #3498db; color: #3498db; }
+
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2 id="page-title">助词特训营</h2>
+        <div class="progress-text" id="progress-display">选择关卡开始挑战</div>
+    </div>
+
+    <div class="container">
+        <!-- 1. 关卡菜单 -->
+        <div id="level-menu">
+            <!-- JS生成 -->
+        </div>
+
+        <!-- 2. 游戏界面 -->
+        <div id="game-area">
+            <div class="scene-box" id="scene-emoji">🏫</div>
+            <div class="sentence-box" id="sentence-display">
+                <!-- 题目内容 -->
+            </div>
+            
+            <div class="options-grid" id="options-container">
+                <!-- 选项按钮 -->
+            </div>
+
+            <div class="feedback-panel" id="feedback-box">
+                <span class="feedback-title" id="fb-title"></span>
+                <span class="feedback-content" id="fb-desc"></span>
+                <div style="text-align: right; margin-top: 10px;">
+                    <button class="btn" style="padding: 5px 15px; font-size: 0.9rem;" onclick="nextQuestion()">继续</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 结算界面 -->
+        <div id="result-area">
+            <div class="score-circle" id="final-score">80%</div>
+            <h3 id="result-msg">挑战成功！</h3>
+            
+            <div class="mistake-list" id="mistake-box" style="display:none;">
+                <h4 style="margin:0 0 10px 0; color:#e74c3c;">❌ 错题本 (自动收集)</h4>
+                <div id="mistake-items"></div>
+            </div>
+
+            <button class="btn" onclick="showMenu()">返回关卡列表</button>
+            <button class="btn btn-outline" onclick="retryLevel()">再试一次</button>
+        </div>
+    </div>
+
+<script>
+    // === 题库数据 ===
+    const gameData = [
+        {
+            id: 1, title: "入门：は / が / を", desc: "主语、主题与宾语的基础区分",
+            questions: [
+                { s: "私__学生です。", ans: "は", opts: ["は", "が", "を"], tip: "「は」提示主题，表示“我是学生”。", img: "👨‍🎓" },
+                { s: "りんご__食べます。", ans: "を", opts: ["は", "に", "を"], tip: "「を」表示动作的对象（宾语）。", img: "🍎" },
+                { s: "猫__います。", ans: "が", opts: ["は", "を", "が"], tip: "存在句中，存在的主体用「が」提示。", img: "🐱" },
+                { s: "これ__本です。", ans: "は", opts: ["は", "の", "を"], tip: "「これ」是主题，后接「は」。", img: "📖" },
+                { s: "ご飯__作ります。", ans: "を", opts: ["が", "を", "へ"], tip: "做饭，饭是制作的对象，用「を」。", img: "🍳" }
+            ]
+        },
+        {
+            id: 2, title: "进阶：に / で / へ", desc: "时间、地点与方向的易混点",
+            questions: [
+                { s: "学校__行きます。", ans: "へ", opts: ["に", "で", "へ"], tip: "表示移动方向时，常用「へ」（读作e）。「に」也可以。", img: "🏫" },
+                { s: "図書館__勉強します。", ans: "で", opts: ["に", "で", "を"], tip: "在某地做某事（动作场所），用「で」。", img: "📚" },
+                { s: "6時__起きます。", ans: "に", opts: ["で", "に", "を"], tip: "具体的时间点后面接「に」。", img: "⏰" },
+                { s: "バス__来ました。", ans: "で", opts: ["に", "で", "と"], tip: "表示交通工具/手段，用「で」。", img: "🚌" },
+                { s: "部屋__机があります。", ans: "に", opts: ["で", "に", "へ"], tip: "存在句中，存在的地点用「に」。", img: "🪑" }
+            ]
+        },
+        {
+            id: 3, title: "高阶：综合挑战", desc: "混合考察，包含授受与比较",
+            questions: [
+                { s: "母__プレゼントをあげます。", ans: "に", opts: ["に", "は", "から"], tip: "给某人某物，接受者用「に」。", img: "🎁" },
+                { s: "日本__中国より狭いです。", ans: "は", opts: ["は", "より", "の"], tip: "AはBより... A比B更...", img: "🗺️" },
+                { s: "先生__もらいました。", ans: "に", opts: ["に", "を", "で"], tip: "从某人那里得到，来源可以用「に」或「から」。", img: "📜" },
+                { s: "日曜日__休みたいです。", ans: "は", opts: ["は", "を", "に"], tip: "这里强调周日这一天，用「は」对比或强调。", img: "📅" },
+                { s: "一人__行きます。", ans: "で", opts: ["で", "に", "を"], tip: "表示状态/数量范围（一个人去），用「で」。", img: "🚶" }
+            ]
+        }
+    ];
+
+    // === 游戏状态 ===
+    let currentLevelIdx = 0;
+    let currentQIdx = 0;
+    let score = 0;
+    let mistakes = [];
+    let unlockedLevels = 1; // 默认解锁第一关
+
+    // === 初始化 ===
+    function init() {
+        renderMenu();
+    }
+
+    function renderMenu() {
+        const menu = document.getElementById('level-menu');
+        menu.innerHTML = '';
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('result-area').style.display = 'none';
+        document.getElementById('level-menu').style.display = 'grid';
+        document.getElementById('page-title').innerText = "助词特训营";
+        document.getElementById('progress-display').innerText = "选择关卡开始挑战";
+
+        gameData.forEach((level, idx) => {
+            const card = document.createElement('div');
+            card.className = `level-card ${idx + 1 > unlockedLevels ? 'locked' : ''}`;
+            card.innerHTML = `
+                <div class="level-title">Lv.${level.id} ${level.title}</div>
+                <div class="level-desc">${level.desc}</div>
+                ${idx + 1 > unlockedLevels ? '🔒' : '▶️'}
+            `;
+            card.onclick = () => startLevel(idx);
+            menu.appendChild(card);
+        });
+    }
+
+    function startLevel(idx) {
+        currentLevelIdx = idx;
+        currentQIdx = 0;
+        score = 0;
+        mistakes = [];
+        
+        document.getElementById('level-menu').style.display = 'none';
+        document.getElementById('result-area').style.display = 'none';
+        document.getElementById('game-area').style.display = 'flex';
+        
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        const level = gameData[currentLevelIdx];
+        const q = level.questions[currentQIdx];
+        
+        document.getElementById('page-title').innerText = level.title;
+        document.getElementById('progress-display').innerText = `进度: ${currentQIdx + 1} / ${level.questions.length}`;
+        document.getElementById('scene-emoji').innerText = q.img;
+        
+        // 渲染句子
+        const parts = q.s.split('__');
+        document.getElementById('sentence-display').innerHTML = 
+            `${parts[0]}<span class="blank">?</span>${parts[1]}`;
+            
+        // 渲染选项
+        const optsContainer = document.getElementById('options-container');
+        optsContainer.innerHTML = '';
+        // 打乱选项
+        const shuffledOpts = [...q.opts].sort(() => Math.random() - 0.5);
+        
+        shuffledOpts.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(btn, opt, q);
+            optsContainer.appendChild(btn);
+        });
+
+        // 隐藏反馈
+        document.getElementById('feedback-box').style.display = 'none';
+    }
+
+    function checkAnswer(btn, selected, q) {
+        // 禁用所有按钮
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(b => b.disabled = true);
+
+        const isCorrect = selected === q.ans;
+        const fbBox = document.getElementById('feedback-box');
+        const fbTitle = document.getElementById('fb-title');
+        const fbDesc = document.getElementById('fb-desc');
+
+        if (isCorrect) {
+            score++;
+            btn.classList.add('correct');
+            fbTitle.innerText = "🎉 正解！";
+            fbTitle.style.color = "#27ae60";
+            fbDesc.innerText = q.tip;
+            
+            // 填入正确答案并朗读
+            document.querySelector('.blank').innerText = selected;
+            speak(q.s.replace('__', selected));
+        } else {
+            btn.classList.add('wrong');
+            // 找到正确按钮高亮
+            allBtns.forEach(b => {
+                if(b.innerText === q.ans) b.classList.add('correct');
+            });
+            
+            fbTitle.innerText = "❌ 遗憾...";
+            fbTitle.style.color = "#c0392b";
+            fbDesc.innerText = `正确答案是「${q.ans}」。${q.tip}`;
+            
+            // 记录错题
+            mistakes.push(q);
+        }
+
+        fbBox.style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentQIdx++;
+        if (currentQIdx < gameData[currentLevelIdx].questions.length) {
+            loadQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('result-area').style.display = 'block';
+        
+        const total = gameData[currentLevelIdx].questions.length;
+        const percent = Math.round((score / total) * 100);
+        
+        document.getElementById('final-score').innerText = percent + "%";
+        
+        const msg = document.getElementById('result-msg');
+        if (percent >= 80) {
+            msg.innerText = "🎉 恭喜通关！下一关已解锁";
+            msg.style.color = "#27ae60";
+            if (currentLevelIdx + 1 >= unlockedLevels) {
+                unlockedLevels++;
+            }
+        } else {
+            msg.innerText = "💪 加油，达到80%才能解锁下一关";
+            msg.style.color = "#e67e22";
+        }
+
+        // 渲染错题本
+        const mistakeBox = document.getElementById('mistake-box');
+        const mistakeItems = document.getElementById('mistake-items');
+        mistakeItems.innerHTML = '';
+        
+        if (mistakes.length > 0) {
+            mistakeBox.style.display = 'block';
+            mistakes.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'mistake-item';
+                div.innerHTML = `
+                    <div style="font-weight:bold;">${m.s.replace('__', ' ( ? ) ')}</div>
+                    <div style="color:#27ae60; font-size:0.9rem;">正解：${m.ans}</div>
+                    <div style="color:#7f8c8d; font-size:0.8rem;">${m.tip}</div>
+                `;
+                mistakeItems.appendChild(div);
+            });
+        } else {
+            mistakeBox.style.display = 'none';
+        }
+    }
+
+    function retryLevel() {
+        startLevel(currentLevelIdx);
+    }
+
+    function showMenu() {
+        renderMenu();
+    }
+
+    function speak(text) {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'ja-JP';
+        window.speechSynthesis.speak(u);
+    }
+
+    init();
+</script>
+</body>
+</html>

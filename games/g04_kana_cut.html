@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>假名切切乐</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #222; font-family: "Microsoft YaHei", sans-serif; touch-action: none; }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        /* 界面 UI */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* 让点击穿透到 Canvas */
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        
+        .top-bar {
+            padding: 20px; display: flex; justify-content: space-between;
+            color: white; font-size: 1.5rem; font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        /* 任务提示框 */
+        #task-box {
+            position: absolute; top: 80px; width: 100%; text-align: center;
+            pointer-events: none;
+        }
+        .task-label {
+            display: inline-block; background: rgba(255, 193, 7, 0.9); color: #333;
+            padding: 10px 30px; border-radius: 50px; font-size: 1.8rem; font-weight: bold;
+            box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* 开始/结束菜单 */
+        #menu-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: white; z-index: 100; pointer-events: auto;
+        }
+        .btn {
+            background: linear-gradient(45deg, #FF5252, #D32F2F);
+            color: white; border: none; padding: 15px 50px;
+            font-size: 1.5rem; border-radius: 50px; margin-top: 30px;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(211, 47, 47, 0.4);
+            font-weight: bold;
+        }
+
+        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div id="score-display">得分: 0</div>
+            <div id="time-display">60s</div>
+        </div>
+        <div id="task-box">
+            <div id="current-task" class="task-label">准备开始...</div>
+        </div>
+    </div>
+
+    <div id="menu-layer">
+        <h1 style="font-size: 3rem; color: #FF5252; margin-bottom: 10px;">⚔️ 假名忍者</h1>
+        <p>切中指定假名得分，切错扣分！</p>
+        <p style="color:#aaa;">小心炸弹💣，抢时钟⏰</p>
+        <button class="btn" onclick="startGame()">开始拔刀</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    // === 数据定义 ===
+    const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん".split('');
+    const KATAKANA = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン".split('');
+    
+    const DAKUON_HIRA = "がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ".split(''); // 含半浊音
+    const DAKUON_KATA = "ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ".split('');
+    
+    const YOON_HIRA = ["きゃ","きゅ","きょ","しゃ","しゅ","しょ","ちゃ","ちゅ","ちょ","にゃ","にゅ","にょ","ひゃ","ひゅ","ひょ","みゃ","みゅ","みょ","りゃ","りゅ","りょ","ぎゃ","ぎゅ","ぎょ","じゃ","じゅ","じょ","ぢゃ","ぢゅ","ぢょ","びゃ","びゅ","びょ","ぴゃ","ぴゅ","ぴょ"];
+    const YOON_KATA = ["キャ","キュ","キョ","シャ","シュ","ショ","チャ","チュ","チョ","ニャ","ニュ","ニョ","ヒャ","ヒュ","ヒョ","ミャ","ミュ","ミョ","リャ","リュ","リョ","ギャ","ギュ","ギョ","ジャ","ジュ","ジョ","ヂャ","ヂュ","ヂョ","ビャ","ビュ","ビョ","ピャ","ピュ","ピョ"];
+
+    // 任务类型
+    const TASKS = [
+        { id: 'hira', label: "切平假名！(あ)", check: (t) => HIRAGANA.includes(t) || DAKUON_HIRA.includes(t) || YOON_HIRA.includes(t) },
+        { id: 'kata', label: "切片假名！(ア)", check: (t) => KATAKANA.includes(t) || DAKUON_KATA.includes(t) || YOON_KATA.includes(t) },
+        { id: 'daku', label: "切浊音/半浊音！(゛゜)", check: (t) => DAKUON_HIRA.includes(t) || DAKUON_KATA.includes(t) },
+        { id: 'yoon', label: "切拗音！(ya/yu/yo)", check: (t) => YOON_HIRA.includes(t) || YOON_KATA.includes(t) }
+    ];
+
+    // === 游戏引擎 ===
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    let gameState = 'menu'; // menu, playing, gameover
+    let score = 0;
+    let timeLeft = 60;
+    let currentTask = TASKS[0];
+    let fruits = []; // 飞出的物体
+    let particles = []; // 粒子特效
+    let trail = []; // 鼠标轨迹
+    let spawnTimer = 0;
+    let taskTimer = 0;
+    let gameLoopId;
+
+    // 鼠标/触摸位置
+    let inputPos = { x: 0, y: 0, isDown: false };
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // === 输入处理 ===
+    function handleInputMove(x, y) {
+        inputPos.x = x; inputPos.y = y;
+        if (inputPos.isDown) {
+            trail.push({ x: x, y: y, life: 1.0 });
+            if (trail.length > 10) trail.shift();
+            checkSlice(x, y);
+        }
+    }
+    
+    canvas.addEventListener('mousedown', e => { inputPos.isDown = true; trail = []; });
+    canvas.addEventListener('mousemove', e => handleInputMove(e.clientX, e.clientY));
+    canvas.addEventListener('mouseup', () => { inputPos.isDown = false; trail = []; });
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); inputPos.isDown = true; trail = []; }, {passive: false});
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); handleInputMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+    canvas.addEventListener('touchend', () => { inputPos.isDown = false; trail = []; });
+
+    // === 游戏逻辑 ===
+    function startGame() {
+        document.getElementById('menu-layer').style.display = 'none';
+        gameState = 'playing';
+        score = 0;
+        timeLeft = 60;
+        fruits = [];
+        particles = [];
+        trail = [];
+        
+        changeTask();
+        gameLoop();
+        
+        // 倒计时
+        const timerId = setInterval(() => {
+            if (gameState !== 'playing') { clearInterval(timerId); return; }
+            timeLeft--;
+            document.getElementById('time-display').innerText = timeLeft + 's';
+            if (timeLeft <= 0) gameOver();
+        }, 1000);
+    }
+
+    function changeTask() {
+        currentTask = TASKS[Math.floor(Math.random() * TASKS.length)];
+        const el = document.getElementById('current-task');
+        el.innerText = currentTask.label;
+        // 动画重置
+        el.style.animation = 'none';
+        el.offsetHeight; /* trigger reflow */
+        el.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    }
+
+    function spawnFruit() {
+        // 5% 炸弹, 5% 时钟, 90% 假名
+        const rand = Math.random();
+        let type, text, color;
+        
+        if (rand < 0.05) {
+            type = 'bomb'; text = '💣'; color = '#333';
+        } else if (rand < 0.1) {
+            type = 'clock'; text = '⏰'; color = '#FFD700';
+        } else {
+            type = 'kana';
+            // 随机从所有池子里选一个
+            const pools = [HIRAGANA, KATAKANA, DAKUON_HIRA, DAKUON_KATA, YOON_HIRA, YOON_KATA];
+            const pool = pools[Math.floor(Math.random() * pools.length)];
+            text = pool[Math.floor(Math.random() * pool.length)];
+            
+            // 颜色区分
+            if (HIRAGANA.includes(text) || DAKUON_HIRA.includes(text) || YOON_HIRA.includes(text)) color = '#FF8A80'; // 平假名系粉色
+            else color = '#82B1FF'; // 片假名系蓝色
+        }
+
+        fruits.push({
+            x: Math.random() * (width - 100) + 50,
+            y: height + 50,
+            vx: (Math.random() - 0.5) * 4, // 水平速度
+            vy: -(Math.random() * 5 + 10), // 垂直初速度 (向上)
+            rot: 0,
+            rotSpeed: (Math.random() - 0.5) * 0.2,
+            type: type,
+            text: text,
+            color: color,
+            radius: 40,
+            active: true
+        });
+    }
+
+    function checkSlice(x, y) {
+        // 简单的碰撞检测：检查鼠标位置是否在水果半径内
+        // 更好的做法是线段与圆的相交，这里简化为点与圆，因为鼠标频率高
+        fruits.forEach(f => {
+            if (!f.active) return;
+            const dx = x - f.x;
+            const dy = y - f.y;
+            if (dx*dx + dy*dy < f.radius * f.radius) {
+                sliceFruit(f);
+            }
+        });
+    }
+
+    function sliceFruit(f) {
+        f.active = false;
+        createParticles(f.x, f.y, f.color);
+
+        if (f.type === 'bomb') {
+            gameOver();
+        } else if (f.type === 'clock') {
+            timeLeft += 10;
+            showFloatText(f.x, f.y, "+10s", "#FFD700");
+            playTone('bonus');
+        } else {
+            // 检查是否符合当前任务
+            if (currentTask.check(f.text)) {
+                score += 10;
+                showFloatText(f.x, f.y, "+10", "#4CAF50");
+                playTone('hit');
+            } else {
+                score -= 10;
+                showFloatText(f.x, f.y, "-10", "#F44336");
+                playTone('wrong');
+            }
+        }
+        document.getElementById('score-display').innerText = "得分: " + score;
+    }
+
+    function createParticles(x, y, color) {
+        for(let i=0; i<10; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1.0,
+                color: color
+            });
+        }
+    }
+
+    function update() {
+        // 生成逻辑：每秒 3-5 个 -> 每 200-300ms 生成一个
+        spawnTimer++;
+        if (spawnTimer > (Math.random() * 10 + 15)) { // 约 15-25 帧生成一个
+            spawnFruit();
+            spawnTimer = 0;
+        }
+
+        // 任务切换
+        taskTimer++;
+        if (taskTimer > 360) { // 60fps * 6s = 360
+            changeTask();
+            taskTimer = 0;
+        }
+
+        // 更新水果
+        fruits.forEach(f => {
+            f.x += f.vx;
+            f.y += f.vy;
+            f.vy += 0.2; // 重力
+            f.rot += f.rotSpeed;
+        });
+        // 移除掉出屏幕的水果
+        fruits = fruits.filter(f => f.y < height + 100 && f.active);
+
+        // 更新粒子
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.05;
+        });
+        particles = particles.filter(p => p.life > 0);
+
+        // 更新轨迹
+        trail.forEach(t => t.life -= 0.1);
+        trail = trail.filter(t => t.life > 0);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        // 画水果
+        fruits.forEach(f => {
+            ctx.save();
+            ctx.translate(f.x, f.y);
+            ctx.rotate(f.rot);
+            
+            // 绘制圆形背景
+            ctx.beginPath();
+            ctx.arc(0, 0, f.radius, 0, Math.PI*2);
+            ctx.fillStyle = f.color;
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "white";
+            ctx.stroke();
+
+            // 绘制文字
+            ctx.fillStyle = "white";
+            ctx.font = "bold 30px Microsoft YaHei";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(f.text, 0, 0);
+            
+            ctx.restore();
+        });
+
+        // 画粒子
+        particles.forEach(p => {
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        });
+
+        // 画刀光轨迹
+        if (trail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(trail[0].x, trail[0].y);
+            for (let i = 1; i < trail.length; i++) {
+                ctx.lineTo(trail[i].x, trail[i].y);
+            }
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.lineWidth = 5;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.stroke();
+        }
+    }
+
+    function gameLoop() {
+        if (gameState === 'playing') {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+    }
+
+    function gameOver() {
+        gameState = 'gameover';
+        document.getElementById('menu-layer').style.display = 'flex';
+        document.querySelector('#menu-layer h1').innerText = "游戏结束";
+        document.querySelector('#menu-layer p').innerHTML = `最终得分: <span style="color:#FFD700; font-size:2rem">${score}</span>`;
+        document.querySelector('.btn').innerText = "重新挑战";
+    }
+
+    function showFloatText(x, y, text, color) {
+        // 简单处理：这里可以用 DOM 元素，也可以画在 Canvas 上
+        // 为了性能和层级，这里不画了，或者你可以加个简单的 Canvas 绘制逻辑
+    }
+
+    // === 音效 ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'hit') {
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.2);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'bonus') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.setValueAtTime(1200, now + 0.1);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
+    }
+
+</script>
+</body>
+</html>
