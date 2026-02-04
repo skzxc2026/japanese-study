@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日语写作进阶图鉴 Pro</title>
+    <script src="assets/data.js"></script>
+    <style>
+        :root {
+            --primary: #d93025;
+            --bg-sidebar: #f8f9fa;
+            --border: #e0e0e0;
+            --text-jp: #1565c0; 
+            --text-furigana: #888; 
+            --w-nav: 260px; 
+            --w-list: 320px;
+            --w-gram: 300px;
+            --header-h: 50px; 
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; height: 100vh; overflow: hidden; color: #333; background: white; }
+
+        /* ================= 0. 手机端顶部导航 ================= */
+        .mobile-header {
+            display: none; height: var(--header-h); background: white; border-bottom: 1px solid #eee;
+            align-items: center; padding: 0 15px; justify-content: space-between;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+        }
+        .mh-left { display: flex; align-items: center; gap: 15px; font-weight: bold; font-size: 16px; }
+        .mh-btn { font-size: 20px; cursor: pointer; padding: 5px; }
+        .mh-back { display: none; color: var(--primary); font-size: 14px; align-items: center; cursor: pointer; }
+        
+        /* ================= 1. 左侧导航 ================= */
+        .sidebar { 
+            width: var(--w-nav); min-width: 150px;
+            background: var(--bg-sidebar); display: flex; flex-direction: column; 
+            flex-shrink: 0; border-right: 1px solid var(--border);
+            transition: transform 0.3s ease;
+        }
+        .app-title { padding: 20px; font-size: 18px; font-weight: bold; color: var(--primary); border-bottom: 1px solid var(--border); }
+        .nav-group-title { padding: 15px 20px 5px; font-size: 12px; color: #999; font-weight: bold; }
+        .nav-item { padding: 12px 20px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .nav-item:hover { background: #eee; }
+        .nav-item.active { background: #ffeceb; color: var(--primary); font-weight: bold; border-right: 3px solid var(--primary); }
+
+        .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 150; }
+        
+        /* 拖拽条 */
+        .resizer { width: 10px; background: transparent; cursor: col-resize; z-index: 999; flex-shrink: 0; margin: 0 -5px; position: relative; }
+        .resizer:hover, .resizer.resizing { background: rgba(217, 48, 37, 0.2); }
+
+        /* ================= 2. 中间列表 ================= */
+        .list-panel { 
+            width: var(--w-list); min-width: 200px; 
+            border-right: 1px solid var(--border); display: flex; flex-direction: column; 
+            background: white; flex-shrink: 0; 
+        }
+        .list-header { padding: 15px; border-bottom: 1px solid var(--border); font-weight: bold; }
+        .article-list { flex: 1; overflow-y: auto; }
+        .article-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+        .article-item:hover { background: #f5f5f5; }
+        .article-item.active { background: #ffeceb; }
+        .art-title { font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+        .art-info { font-size: 12px; color: #888; display: flex; align-items: center; gap: 8px; }
+        .art-desc { font-size: 11px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tag { background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: #666; white-space: nowrap; }
+
+        /* ================= 3. 右侧内容区 ================= */
+        .content-panel { flex: 1; display: flex; flex-direction: row; overflow: hidden; position: relative; }
+        .main-text-area { flex: 1; padding: 30px 50px; overflow-y: auto; min-width: 300px; position: relative; }
+        
+        /* 悬浮按钮 (电脑端样式) */
+        .floating-toggle-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: white; border: 1px solid #ddd; padding: 8px 12px; border-radius: 20px;
+            font-size: 13px; color: #555; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 50; display: none; align-items: center; gap: 5px;
+        }
+
+        .article-h1 { font-size: 26px; margin-bottom: 25px; color: #333; }
+
+        /* 卡片样式 */
+        .toggle-box { border-radius: 6px; overflow: hidden; margin-bottom: 25px; border: 1px solid transparent; }
+        .tb-header { padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: bold; }
+        .tb-content { padding: 15px; line-height: 1.8; font-size: 15px; display: block; }
+        .toggle-box.closed .tb-content { display: none; }
+        
+        .style-yellow { border-color: #ffe082; }
+        .style-yellow .tb-header { background: #fff8e1; color: #f57f17; }
+        .style-yellow .tb-content { background: #fffde7; color: #5d4037; }
+
+        .style-green { border-color: #a5d6a7; margin-top: 40px; } 
+        .style-green .tb-header { background: #e8f5e9; color: #2e7d32; }
+        .style-green .tb-content { background: #f1f8e9; color: #333; }
+
+        .jp-content { margin-top: 10px; }
+        .jp-content p { margin-bottom: 1em; line-height: 2.0; font-size: 20px; text-indent: 0; color: var(--text-jp); font-weight: 500; }
+        ruby { ruby-align: center; }
+        ruby rt { color: var(--text-furigana); font-size: 0.55em; }
+        .sent-span { cursor: pointer; padding: 2px 2px; border-radius: 4px; }
+        .sent-span.playing { background: #fff9c4; color: #e65100; }
+
+        /* ================= 4. 语法侧边栏 ================= */
+        .grammar-sidebar { 
+            width: var(--w-gram); min-width: 200px;
+            background: #fcfcfc; border-left: 1px solid var(--border); 
+            display: flex; flex-direction: column; flex-shrink: 0;
+            z-index: 160;
+        }
+        .grammar-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; background: #fbfbfb; }
+        .grammar-list { padding: 15px; overflow-y: auto; flex: 1; }
+        
+        /* 字体大小 (保持小巧) */
+        .grammar-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .g-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .g-point { font-size: 18px; font-weight: bold; color: #d93025; font-family: "Hiragino Sans", "Meiryo", sans-serif; }
+        .g-level { background: #d93025; color: white; font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold; transform: translateY(-1px); }
+        .g-mean { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .g-desc { font-size: 12px; color: #777; line-height: 1.5; }
+
+        /* ================= 📱 移动端适配 ================= */
+        @media (max-width: 768px) {
+            body { flex-direction: column; padding-top: var(--header-h); }
+            .mobile-header { display: flex; }
+            .app-title { display: none; }
+            .sidebar {
+                position: fixed; top: 0; bottom: 0; left: 0; width: 260px; z-index: 210;
+                transform: translateX(-100%); box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .list-panel { width: 100%; border-right: none; height: 100%; }
+            .list-header { display: none; }
+            .content-panel { 
+                position: fixed; top: var(--header-h); bottom: 0; left: 0; right: 0;
+                width: 100%; background: white; z-index: 50;
+                display: none; flex-direction: column;
+            }
+            .content-panel.active { display: flex; }
+            .main-text-area { padding: 20px; min-width: 0; padding-bottom: 80px; /* 防止内容被按钮遮挡 */ }
+            .article-h1 { font-size: 22px; }
+            .jp-content p { font-size: 18px; }
+            
+            .grammar-sidebar {
+                position: fixed; top: 0; bottom: 0; right: 0;
+                width: 85%; max-width: 300px;
+                transform: translateX(100%); transition: transform 0.3s;
+                border-left: 1px solid #eee; box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            }
+            .grammar-sidebar.open { transform: translateX(0); }
+            
+            .resizer { display: none !important; }
+            
+            /* ⚠️ 手机端专属悬浮按钮 (FAB) */
+            .floating-toggle-btn { 
+                display: flex !important; /* 强制显示 */
+                position: fixed; /* 固定在屏幕上 */
+                top: auto; bottom: 30px; right: 20px; 
+                width: 50px; height: 50px; 
+                border-radius: 50%; 
+                background: var(--primary); 
+                color: white; 
+                border: none; 
+                box-shadow: 0 4px 12px rgba(217, 48, 37, 0.4); 
+                justify-content: center; 
+                padding: 0;
+                z-index: 300; /* 层级最高 */
+            }
+            /* 隐藏按钮里的文字，只留图标 */
+            .floating-toggle-btn span { font-size: 24px; margin: 0; }
+            .btn-text { display: none; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 📱 手机端顶部导航 -->
+    <div class="mobile-header">
+        <div class="mh-left">
+            <div class="mh-btn" onclick="toggleMobileMenu()">☰</div>
+            <span id="mobileTitle">日语写作进阶</span>
+        </div>
+        <div class="mh-back" id="mobileBackBtn" onclick="backToList()">
+            ⬅️ 返回列表
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="closeAllDrawers()"></div>
+
+    <!-- 1. 左侧导航 -->
+    <div class="sidebar" id="sidebarLeft">
+        <div class="app-title">📖 日语写作进阶</div>
+        
+        <div class="nav-group-title">日语作文</div>
+        <div class="nav-item active" onclick="loadModule('writing_material_exam', '历年真题作文')">历年真题作文</div>
+        <div class="nav-item" onclick="loadModule('writing_material_small', '小作文素材')">小作文素材</div>
+        <div class="nav-item" onclick="loadModule('writing_material_large', '大作文素材')">大作文素材</div>
+        <div class="nav-item" onclick="loadModule('writing_practice', '实战演练')">实战演练</div>
+
+        <div class="nav-group-title">日语题库</div>
+        <div class="nav-item" onclick="loadModule('question_listening', '听力题库')">听力题库</div>
+        <div class="nav-item" onclick="loadModule('question_grammar', '语法题库')">语法题库</div>
+        
+        <div class="nav-group-title">小游戏</div>
+        <div class="nav-item" onclick="loadModule('game_kana', '五十音图')">五十音图</div>
+    </div>
+
+    <div class="resizer" id="resizerLeft"></div>
+
+    <!-- 2. 中间列表 -->
+    <div class="list-panel" id="listPanel">
+        <div class="list-header" id="moduleTitle">历年真题作文</div>
+        <div class="article-list" id="articleList"></div>
+    </div>
+
+    <div class="resizer" id="resizerList"></div>
+
+    <!-- 3. 右侧正文 -->
+    <div class="content-panel" id="contentPanel">
+        <div class="main-text-area" id="mainTextArea">
+            <!-- 悬浮的展开按钮 -->
+            <div class="floating-toggle-btn" id="floatGrammarBtn" onclick="openGrammar()">
+                <span>📖</span> <span class="btn-text">语法解析</span>
+            </div>
+
+            <div id="articleContent">
+                <div style="color:#999; margin-top:100px; text-align:center;">请选择一篇文章开始学习</div>
+            </div>
+        </div>
+
+        <div class="resizer" id="resizerRight"></div>
+
+        <!-- 4. 语法侧边栏 -->
+        <div class="grammar-sidebar" id="sidebarRight">
+            <div class="grammar-header" onclick="closeGrammar()">
+                <span>📖 重点语法解析</span>
+                <span style="font-size:12px; color:#999">收起 ▶</span>
+            </div>
+            <div class="grammar-list" id="grammarList"></div>
+        </div>
+    </div>
+
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        // ================= 拖拽逻辑 =================
+        function initResize(resizerId, targetId, mode, offsetTargetId = null) {
+            const resizer = document.getElementById(resizerId);
+            const target = document.getElementById(targetId);
+            const offsetTarget = offsetTargetId ? document.getElementById(offsetTargetId) : null;
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('resizing');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                let newWidth = 0;
+                if (mode === 'absolute') {
+                    newWidth = e.clientX;
+                    if (newWidth < 150) newWidth = 150;
+                    if (newWidth > 400) newWidth = 400;
+                } else if (mode === 'relative') {
+                    const leftWidth = offsetTarget.getBoundingClientRect().width;
+                    newWidth = e.clientX - leftWidth;
+                    if (newWidth < 200) newWidth = 200;
+                    if (newWidth > 600) newWidth = 600;
+                } else if (mode === 'right-align') {
+                    newWidth = window.innerWidth - e.clientX;
+                    if (newWidth < 200) newWidth = 200; 
+                    if (newWidth > 600) newWidth = 600;
+                }
+                target.style.width = newWidth + 'px';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('resizing');
+                    document.body.style.cursor = 'default';
+                }
+            });
+        }
+
+        initResize('resizerLeft', 'sidebarLeft', 'absolute');
+        initResize('resizerList', 'listPanel', 'relative', 'sidebarLeft');
+        initResize('resizerRight', 'sidebarRight', 'right-align');
+
+        // ================= 数据加载逻辑 =================
+        window.onload = () => {
+            if(typeof db !== 'undefined') {
+                loadModule('writing_material_exam', '历年真题作文');
+            }
+            initTouchGestures(); // 初始化手势
+        };
+
+        function loadModule(sheetName, title) {
+            document.getElementById('moduleTitle').innerText = title;
+            document.getElementById('mobileTitle').innerText = title;
+            closeAllDrawers();
+
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active');
+                if(el.innerText === title) el.classList.add('active');
+            });
+
+            const listEl = document.getElementById('articleList');
+            listEl.innerHTML = "";
+            const data = db[sheetName] || [];
+
+            if(data.length === 0) {
+                listEl.innerHTML = "<div style='padding:20px;color:#999'>暂无数据</div>";
+                return;
+            }
+
+            data.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'article-item';
+                let yearDisplay = item.year.replace('年', '') + '年';
+                
+                let metaInfo = "";
+                if (sheetName === 'writing_material_small') {
+                    metaInfo = `<span class="tag">${item.writing_type || '基础'}</span>`;
+                } else if (sheetName === 'writing_material_large') {
+                    metaInfo = `<span class="tag">${item.exam_name || '综合'}</span>`;
+                } else {
+                    metaInfo = `<span class="tag">${yearDisplay}</span>`;
+                }
+
+                div.innerHTML = `
+                    <div class="art-title">${item.title}</div>
+                    <div class="art-info">
+                        ${metaInfo} 
+                        <span class="art-desc">| ${item.requirements}</span>
+                    </div>
+                `;
+                div.onclick = () => loadArticle(item, div);
+                listEl.appendChild(div);
+            });
+        }
+
+        function loadArticle(item, domElement) {
+            document.querySelectorAll('.article-item').forEach(e => e.classList.remove('active'));
+            domElement.classList.add('active');
+
+            if (window.innerWidth < 768) {
+                document.getElementById('contentPanel').classList.add('active');
+                document.getElementById('mobileBackBtn').style.display = 'flex';
+                document.querySelector('.mh-left').style.display = 'none';
+            }
+
+            const contentEl = document.getElementById('articleContent');
+            const grammarEl = document.getElementById('grammarList');
+
+            let html = `<h1 class="article-h1">${item.title}</h1>`;
+
+            html += `
+                <div class="toggle-box style-yellow">
+                    <div class="tb-header" onclick="toggleBox(this)">
+                        <div><span class="tb-icon">📋</span>写作要点 / 题目要求</div>
+                        <div class="tb-toggle-hint">(点击收起) <span class="tb-arrow">▼</span></div>
+                    </div>
+                    <div class="tb-content">
+                        ${item.requirements}
+                    </div>
+                </div>
+            `;
+
+            html += `<div class="jp-content">`;
+            if (item.content_struct) {
+                item.content_struct.forEach(paragraph => {
+                    html += `<p>`;
+                    paragraph.forEach(sent => {
+                        html += `<span class="sent-span" onclick="playAudio('${sent.audio}', this)">${sent.furigana}</span>`;
+                    });
+                    html += `</p>`;
+                });
+            }
+            html += `</div>`;
+
+            html += `
+                <div class="toggle-box style-green">
+                    <div class="tb-header" onclick="toggleBox(this)">
+                        <div><span class="tb-icon">🇨🇳</span>参考译文</div>
+                        <div class="tb-toggle-hint">(点击收起) <span class="tb-arrow">▼</span></div>
+                    </div>
+                    <div class="tb-content">
+                        ${item.full_cn.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `;
+            
+            contentEl.innerHTML = html;
+
+            let gHtml = "";
+            if (item.grammar && item.grammar.length > 0) {
+                item.grammar.forEach(g => {
+                    gHtml += `
+                        <div class="grammar-card">
+                            <div class="g-header">
+                                <div class="g-point">${g.point}</div>
+                                <div class="g-level">${g.level || 'N?'}</div>
+                            </div>
+                            <div class="g-mean">${g.meaning}</div>
+                            <div class="g-desc">${g.desc}</div>
+                        </div>
+                    `;
+                });
+            } else {
+                gHtml = "<div style='color:#999;font-size:12px;padding:10px'>暂无语法解析</div>";
+            }
+            grammarEl.innerHTML = gHtml;
+        }
+
+        function playAudio(url, el) {
+            const player = document.getElementById('audioPlayer');
+            document.querySelectorAll('.sent-span').forEach(s => s.classList.remove('playing'));
+            el.classList.add('playing');
+            player.src = url;
+            player.play();
+            player.onended = () => el.classList.remove('playing');
+        }
+
+        function toggleBox(header) {
+            const box = header.parentElement;
+            const hint = header.querySelector('.tb-toggle-hint');
+            box.classList.toggle('closed');
+            if(box.classList.contains('closed')) {
+                hint.innerHTML = '(点击展开) <span class="tb-arrow">▼</span>';
+            } else {
+                hint.innerHTML = '(点击收起) <span class="tb-arrow">▼</span>';
+            }
+        }
+
+        // ================= 📱 手机端逻辑 =================
+        function toggleMobileMenu() {
+            document.getElementById('sidebarLeft').classList.add('open');
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function closeAllDrawers() {
+            document.getElementById('sidebarLeft').classList.remove('open');
+            document.getElementById('sidebarRight').classList.remove('open');
+            document.getElementById('overlay').style.display = 'none';
+            
+            // 手机端：关闭抽屉时，确保悬浮按钮显示
+            if(window.innerWidth < 768) {
+                document.getElementById('floatGrammarBtn').style.display = 'flex';
+            }
+        }
+
+        function backToList() {
+            document.getElementById('contentPanel').classList.remove('active');
+            document.getElementById('mobileBackBtn').style.display = 'none';
+            document.querySelector('.mh-left').style.display = 'flex';
+        }
+
+        // ================= 通用语法栏逻辑 =================
+        function closeGrammar() {
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebarRight').classList.remove('open');
+                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('floatGrammarBtn').style.display = 'flex'; // 手机端恢复按钮
+            } else {
+                document.getElementById('sidebarRight').style.display = 'none';
+                document.getElementById('resizerRight').style.display = 'none';
+                document.getElementById('floatGrammarBtn').style.display = 'flex';
+            }
+        }
+
+        function openGrammar() {
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebarRight').classList.add('open');
+                document.getElementById('overlay').style.display = 'block';
+                document.getElementById('floatGrammarBtn').style.display = 'none'; // 手机端隐藏按钮
+            } else {
+                const sidebar = document.getElementById('sidebarRight');
+                sidebar.style.display = 'flex';
+                sidebar.style.width = '300px';
+                document.getElementById('resizerRight').style.display = 'block';
+                document.getElementById('floatGrammarBtn').style.display = 'none';
+            }
+        }
+
+        // ================= 👆 手势滑动逻辑 (新增) =================
+        function initTouchGestures() {
+            let touchStartX = 0;
+            let touchEndX = 0;
+            const minSwipeDistance = 50; // 最小滑动距离
+
+            // 1. 在内容区左滑 -> 打开语法
+            const contentArea = document.getElementById('mainTextArea');
+            contentArea.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+
+            contentArea.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                if (touchStartX - touchEndX > minSwipeDistance) {
+                    // 向左滑动
+                    if(window.innerWidth < 768) openGrammar();
+                }
+            }, {passive: true});
+
+            // 2. 在语法栏右滑 -> 关闭语法
+            const grammarSidebar = document.getElementById('sidebarRight');
+            grammarSidebar.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+
+            grammarSidebar.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                if (touchEndX - touchStartX > minSwipeDistance) {
+                    // 向右滑动
+                    if(window.innerWidth < 768) closeGrammar();
+                }
+            }, {passive: true});
+        }
+    </script>
+</body>
+</html>
