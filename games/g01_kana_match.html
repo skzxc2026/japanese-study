@@ -608,5 +608,117 @@
             if(particles.length>0) requestAnimationFrame(loopConfetti);
         }
     </script>
+    <!-- ================= 🎮 通用游戏控制栏 (复制到所有游戏文件) ================= -->
+<div id="game-controls" style="
+    position: fixed; 
+    top: 10px; 
+    right: 10px; 
+    z-index: 9999; 
+    display: flex; 
+    gap: 8px;
+">
+    <button onclick="doPause()" style="
+        background: rgba(255, 255, 255, 0.9); 
+        border: 1px solid #ddd; 
+        padding: 8px 15px; 
+        border-radius: 20px; 
+        cursor: pointer; 
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    ">⏸️ 暂停</button>
+
+    <button onclick="goBack()" style="
+        background: rgba(255, 255, 255, 0.9); 
+        border: 1px solid #ddd; 
+        padding: 8px 15px; 
+        border-radius: 20px; 
+        cursor: pointer; 
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    ">🔙 返回</button>
+
+    <button onclick="goHome()" style="
+        background: #d93025; 
+        color: white;
+        border: none; 
+        padding: 8px 15px; 
+        border-radius: 20px; 
+        cursor: pointer; 
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(217, 48, 37, 0.3);
+    ">🏠 主页</button>
+</div>
+
+<!-- 暂停遮罩层 -->
+<div id="pause-overlay" style="
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 10000;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+">
+    <h1 style="font-size: 40px; margin-bottom: 20px;">⏸️ 游戏暂停</h1>
+    <button onclick="resumeGame()" style="
+        padding: 15px 40px;
+        font-size: 20px;
+        background: #00b894;
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        font-weight: bold;
+    ">▶️ 继续游戏</button>
+</div>
+
+<script>
+    // 1. 返回上一页 (调用父级 index.html 的方法)
+    function goBack() {
+        if (window.parent && window.parent.closeGameMode) {
+            window.parent.closeGameMode();
+        } else {
+            // 如果是单独打开的网页，则退回浏览器历史
+            history.back();
+        }
+    }
+
+    // 2. 返回主页 (刷新父级页面)
+    function goHome() {
+        if (window.top) {
+            window.top.location.reload();
+        } else {
+            location.reload();
+        }
+    }
+
+    // 3. 暂停功能 (通用遮罩法)
+    function doPause() {
+        // 显示遮罩
+        document.getElementById('pause-overlay').style.display = 'flex';
+        
+        // 尝试暂停贪吃蛇 (如果存在 gameLoop 变量)
+        if (typeof gameLoop !== 'undefined') clearInterval(gameLoop);
+        if (typeof isPaused !== 'undefined') isPaused = true;
+        
+        // 尝试暂停消消乐/拼图 (如果有 timer 变量)
+        if (typeof timer !== 'undefined') clearInterval(timer);
+    }
+
+    // 4. 继续功能
+    function resumeGame() {
+        document.getElementById('pause-overlay').style.display = 'none';
+        
+        // 这里的恢复逻辑可能需要根据具体游戏微调
+        // 大多数简单的 JS 游戏点击继续后，手动操作一下就会恢复，或者重新开始计时
+        if (typeof isPaused !== 'undefined') isPaused = false;
+        
+        // 提示用户
+        // console.log("游戏已恢复，请尝试操作或点击开始");
+    }
+</script>
+<!-- ====================================================================== -->
+
 </body>
 </html>

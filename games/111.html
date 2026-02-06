@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>五十音拼图大作战 Pro</title>
+    <style>
+        /* ================= 🎨 动态配色系统 ================= */
+        :root {
+            /* 默认：清音 (抹茶绿) */
+            --bg-color: #f0fdf4;
+            --primary: #4ade80;
+            --primary-dark: #16a34a;
+            --board-bg: #dcfce7;
+            --slot-border: #86efac;
+            --tile-bg: #ffffff;
+            --text-color: #14532d;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 浊音 (蜜柑橙) */
+        body[data-category="dakuon"] {
+            --bg-color: #fff7ed;
+            --primary: #fb923c;
+            --primary-dark: #ea580c;
+            --board-bg: #ffedd5;
+            --slot-border: #fdba74;
+            --text-color: #7c2d12;
+        }
+
+        /* 拗音 (藤紫) */
+        body[data-category="yoon"] {
+            --bg-color: #faf5ff;
+            --primary: #a78bfa;
+            --primary-dark: #7c3aed;
+            --board-bg: #f3e8ff;
+            --slot-border: #d8b4fe;
+            --text-color: #581c87;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: "Hiragino Sans", "Microsoft YaHei", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.5s, color 0.5s;
+        }
+
+        /* ================= 顶部控制栏 ================= */
+        .header {
+            padding: 0 15px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+            height: 60px;
+            position: relative;
+        }
+        
+        .left-area { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .title { font-size: 16px; font-weight: bold; white-space: nowrap; }
+        #timer {
+            font-family: monospace; font-size: 15px; font-weight: bold;
+            color: var(--primary-dark);
+            background: rgba(0,0,0,0.05);
+            padding: 2px 6px; border-radius: 6px;
+        }
+
+        .center-area {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 8px;
+        }
+        
+        .btn-group {
+            display: flex; background: rgba(0,0,0,0.05);
+            padding: 3px; border-radius: 20px;
+        }
+
+        .btn-pill {
+            padding: 5px 10px; border: none; border-radius: 15px;
+            font-size: 13px; cursor: pointer; background: transparent;
+            color: #666; font-weight: bold; transition: 0.2s; white-space: nowrap;
+        }
+        .btn-pill.active {
+            background: white; color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .toggle-btn {
+            padding: 5px 12px; border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 15px; font-size: 13px; cursor: pointer;
+            background: white; color: var(--text-color); font-weight: bold;
+            transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex; align-items: center; gap: 4px;
+        }
+        .toggle-btn:active { transform: scale(0.95); background: #f0f0f0; }
+
+        .right-area { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; }
+
+        .mini-btn {
+            background: white; border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 10px; width: 34px; height: 34px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 16px; cursor: pointer; transition: 0.2s; color: var(--text-color);
+        }
+        .mini-btn:active { transform: scale(0.9); background: #f0f0f0; }
+        .mini-btn.home-btn { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
+
+        /* ================= 游戏主区域 ================= */
+        .game-container {
+            flex: 1; display: flex; flex-direction: column;
+            padding: 10px; gap: 10px; overflow: hidden;
+        }
+
+        .board-area {
+            flex: 2; background: var(--board-bg);
+            border-radius: 16px; padding: 15px;
+            overflow-y: auto; display: flex;
+            justify-content: center; align-items: flex-start;
+            border: 2px dashed var(--slot-border);
+            transition: background 0.5s, border-color 0.5s;
+        }
+
+        .kana-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 8px; width: 100%; max-width: 450px;
+            &.grid-yoon { grid-template-columns: repeat(3, 1fr); max-width: 300px; }
+        }
+
+        .slot {
+            aspect-ratio: 1; background: rgba(255,255,255,0.4);
+            border: 1px solid var(--slot-border); border-radius: 10px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; color: rgba(0,0,0,0.1); position: relative;
+            transition: 0.2s;
+            cursor: pointer; /* 增加点击手型 */
+        }
+        .slot.wrong { animation: shake 0.4s; border-color: #ef4444; background: #fee2e2; }
+
+        @keyframes shake { 
+            0%, 100% { transform: translateX(0); } 
+            20% { transform: translateX(-6px); } 
+            40% { transform: translateX(6px); } 
+            60% { transform: translateX(-3px); } 
+            80% { transform: translateX(3px); } 
+        }
+
+        .pool-area {
+            flex: 1; background: rgba(255,255,255,0.7);
+            border-radius: 16px; padding: 15px;
+            display: flex; flex-wrap: wrap; align-content: flex-start;
+            justify-content: center; gap: 10px;
+            overflow-y: auto; border-top: 1px solid rgba(0,0,0,0.05);
+            min-height: 180px; transition: height 0.3s;
+        }
+
+        .tile {
+            width: 48px; height: 48px;
+            background: var(--tile-bg); border-radius: 10px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 22px; font-weight: bold; color: var(--text-color);
+            box-shadow: 0 4px 0 var(--slot-border), 0 5px 10px rgba(0,0,0,0.1);
+            cursor: grab;
+            touch-action: none;
+            position: relative;
+            z-index: 1;
+            transition: transform 0.2s, background 0.2s, color 0.2s, left 0.3s, top 0.3s; 
+        }
+        
+        /* 🌟 点击选中状态 (复刻原版) */
+        .tile.selected { 
+            background: var(--primary); 
+            color: white; 
+            transform: scale(1.15) translateY(-10px);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.2);
+            z-index: 100;
+            border: 2px solid white;
+        }
+
+        /* 🌟 拖拽状态 */
+        .tile.dragging {
+            position: fixed !important;
+            z-index: 9999 !important;
+            transition: none !important;
+            transform: scale(1.2) !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+            opacity: 0.95;
+            pointer-events: none;
+            border: 2px solid white;
+        }
+        
+        .tile.placed { 
+            width: 100% !important; height: 100% !important;
+            border-radius: 8px; box-shadow: none; border: none;
+            position: static !important;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            cursor: default; transform: none !important;
+            background: var(--tile-bg); color: var(--text-color); /* 放置后恢复颜色 */
+        }
+
+        .tile.placeholder {
+            visibility: hidden; opacity: 0;
+            box-shadow: none; border: 2px dashed rgba(0,0,0,0.1);
+            background: transparent;
+        }
+
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+
+        /* 胜利弹窗 */
+        .modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 1000; flex-direction: column;
+        }
+        .modal-content {
+            background: white; padding: 40px; border-radius: 24px;
+            text-align: center; animation: slideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 85%; max-width: 320px;
+        }
+        .modal h2 { margin: 10px 0; color: var(--primary-dark); font-size: 24px; }
+        .big-btn {
+            padding: 12px 35px; background: var(--primary); color: white;
+            border: none; border-radius: 50px; font-size: 16px; font-weight: bold;
+            cursor: pointer; box-shadow: 0 8px 20px -5px var(--primary); transition: 0.2s;
+        }
+        .big-btn:active { transform: scale(0.95); }
+
+        @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        @media (min-width: 768px) {
+            .game-container { flex-direction: row; padding: 30px; gap: 30px; }
+            .board-area { flex: 2; }
+            .pool-area { flex: 1; min-width: 300px; }
+            .kana-grid { gap: 12px; }
+            .slot { font-size: 32px; border-width: 2px; }
+            .tile { width: 60px; height: 60px; font-size: 26px; }
+        }
+    </style>
+</head>
+<body data-category="seion">
+
+    <!-- 顶部控制栏 -->
+    <div class="header">
+        <div class="left-area">
+            <div class="title">🧩 拼图</div>
+            <div id="timer">00:00</div>
+        </div>
+        
+        <div class="center-area">
+            <div class="btn-group">
+                <button class="btn-pill active" onclick="setCategory('seion', this)">清音</button>
+                <button class="btn-pill" onclick="setCategory('dakuon', this)">浊音</button>
+                <button class="btn-pill" onclick="setCategory('yoon', this)">拗音</button>
+            </div>
+            <button class="toggle-btn" onclick="toggleKanaType()" id="kanaTypeBtn">
+                平/片 ⇄
+            </button>
+        </div>
+
+        <div class="right-area">
+            <button class="mini-btn" onclick="toggleMute()" title="静音" id="muteBtn">🔊</button>
+            <button class="mini-btn home-btn" onclick="goHome()" title="主页">🏠</button>
+            <button class="mini-btn" onclick="doPause()" title="暂停">⏸</button>
+        </div>
+    </div>
+
+    <!-- 游戏主区域 -->
+    <div class="game-container">
+        <div class="board-area">
+            <div class="kana-grid" id="board"></div>
+        </div>
+        <div class="pool-area" id="pool"></div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal" id="winModal">
+        <div class="modal-content">
+            <h2>🎉 拼图完成！</h2>
+            <p id="winTime">用时: 00:00</p>
+            <div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
+                <button class="big-btn" onclick="restartGame()">再玩一次</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 暂停遮罩 -->
+    <div id="pause-overlay" style="
+        display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.9); z-index: 10000;
+        flex-direction: column; justify-content: center; align-items: center;
+        color: white; backdrop-filter: blur(5px);
+    ">
+        <h1 style="font-size: 28px; margin-bottom: 20px; letter-spacing: 2px;">⏸ 游戏暂停</h1>
+        <button onclick="resumeGame()" style="
+            padding: 12px 35px; font-size: 18px; background: #00b894; color: white;
+            border: none; border-radius: 50px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4); transition: transform 0.2s;
+        ">▶️ 继续游戏</button>
+    </div>
+
+    <script>
+        // ================= 数据定义 =================
+        const KANA_DATA = {
+            seion: [
+                ['あ','い','う','え','お'], ['か','き','く','け','こ'], ['さ','し','す','せ','そ'],
+                ['た','ち','つ','て','と'], ['な','に','ぬ','ね','の'], ['は','ひ','ふ','へ','ほ'],
+                ['ま','み','む','め','も'], ['や','','ゆ','','よ'], ['ら','り','る','れ','ろ'],
+                ['わ','','','','を'], ['ん','','','','']
+            ],
+            dakuon: [
+                ['が','ぎ','ぐ','げ','ご'], ['ざ','じ','ず','ぜ','ぞ'],
+                ['だ','ぢ','づ','で','ど'], ['ば','び','ぶ','べ','ぼ'],
+                ['ぱ','ぴ','ぷ','ぺ','ぽ']
+            ],
+            yoon: [
+                ['きゃ','きゅ','きょ'], ['しゃ','しゅ','しょ'], ['ちゃ','ちゅ','ちょ'],
+                ['にゃ','にゅ','にょ'], ['ひゃ','ひゅ','ひょ'], ['みゃ','みゅ','みょ'],
+                ['りゃ','りゅ','りょ'], ['ぎゃ','ぎゅ','ぎょ'], ['じゃ','じゅ','じょ'],
+                ['びゃ','びゅ','びょ'], ['ぴゃ','ぴゅ','ぴょ']
+            ]
+        };
+
+        let currentCategory = 'seion';
+        let isKatakana = false;
+        let startTime;
+        let gameTimer;
+        let isMuted = false;
+        let isPaused = false;
+        let selectedTile = null; // 当前选中的卡片
+
+        // ================= 🔊 声音系统 =================
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration) {
+            if (isMuted) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playSound(type) {
+            switch(type) {
+                case 'click': playTone(400, 'triangle', 0.1); break;
+                case 'correct': 
+                    setTimeout(() => playTone(500, 'sine', 0.1), 0);
+                    setTimeout(() => playTone(1000, 'sine', 0.2), 100);
+                    break;
+                case 'wrong': playTone(150, 'sawtooth', 0.3); break;
+                case 'win': 
+                    setTimeout(() => playTone(500, 'sine', 0.2), 0);
+                    setTimeout(() => playTone(600, 'sine', 0.2), 200);
+                    setTimeout(() => playTone(800, 'sine', 0.4), 400);
+                    break;
+            }
+        }
+
+        function toDisplayChar(char) {
+            if (!char) return '';
+            if (!isKatakana) return char;
+            const code = char.charCodeAt(0);
+            if (code >= 0x3041 && code <= 0x3096) {
+                return String.fromCharCode(code + 0x60);
+            }
+            return char;
+        }
+
+        // ================= 初始化 =================
+        function initGame() {
+            const board = document.getElementById('board');
+            const pool = document.getElementById('pool');
+            
+            board.innerHTML = '';
+            pool.innerHTML = '';
+            board.className = currentCategory === 'yoon' ? 'kana-grid grid-yoon' : 'kana-grid';
+            selectedTile = null;
+            
+            let flatKana = [];
+            KANA_DATA[currentCategory].forEach(row => {
+                row.forEach(char => {
+                    const displayChar = toDisplayChar(char);
+                    if(char) flatKana.push({ original: char, display: displayChar });
+                    
+                    const slot = document.createElement('div');
+                    slot.className = 'slot';
+                    if(char) {
+                        slot.dataset.char = char;
+                        slot.textContent = displayChar;
+                        // 🌟 绑定空格点击事件 (用于点击配对)
+                        slot.onclick = () => handleSlotClick(slot);
+                    } else {
+                        slot.style.visibility = 'hidden';
+                    }
+                    board.appendChild(slot);
+                });
+            });
+
+            flatKana.sort(() => Math.random() - 0.5);
+            flatKana.forEach(item => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.textContent = item.display;
+                tile.dataset.char = item.original;
+                addInteractionListeners(tile); // 绑定拖拽和点击
+                pool.appendChild(tile);
+            });
+
+            startTimer();
+            document.getElementById('winModal').style.display = 'none';
+        }
+
+        // ================= 👆 点击配对逻辑 =================
+        function handleTileClick(tile) {
+            if (tile.classList.contains('placed')) return;
+            
+            playSound('click');
+            
+            // 如果已经选中了当前卡片，则取消选中
+            if (selectedTile === tile) {
+                tile.classList.remove('selected');
+                selectedTile = null;
+            } else {
+                // 如果之前有选中的，先取消
+                if (selectedTile) selectedTile.classList.remove('selected');
+                // 选中新的
+                tile.classList.add('selected');
+                selectedTile = tile;
+            }
+        }
+
+        function handleSlotClick(slot) {
+            if (!selectedTile || slot.classList.contains('filled')) return;
+
+            if (slot.dataset.char === selectedTile.dataset.char) {
+                // ✅ 配对成功
+                // 移除选中状态
+                selectedTile.classList.remove('selected');
+                successDrop(selectedTile, slot, null); // null 表示没有占位符
+                selectedTile = null;
+            } else {
+                // ❌ 配对失败
+                playSound('wrong');
+                slot.classList.add('wrong');
+                setTimeout(() => slot.classList.remove('wrong'), 400);
+                // 取消选中，让用户重新选择，或者保持选中(这里选择取消以示惩罚)
+                selectedTile.classList.remove('selected');
+                selectedTile = null;
+            }
+        }
+
+        // ================= ✋ 拖拽 + 点击 混合处理 =================
+        function addInteractionListeners(tile) {
+            let placeholder = document.createElement('div');
+            placeholder.className = 'tile placeholder';
+            
+            let startX, startY;
+            let isDragging = false;
+            let hasMoved = false;
+
+            const startDrag = (e) => {
+                if(isPaused || tile.classList.contains('placed')) return;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                // 记录初始位置
+                const point = e.touches ? e.touches[0] : e;
+                startX = point.clientX;
+                startY = point.clientY;
+                
+                isDragging = false;
+                hasMoved = false;
+                
+                // 绑定 move 和 up 事件
+                document.addEventListener('mousemove', moveDrag);
+                document.addEventListener('mouseup', endDrag);
+                document.addEventListener('touchmove', moveDrag, {passive: false});
+                document.addEventListener('touchend', endDrag);
+            };
+
+            const moveDrag = (e) => {
+                const point = e.touches ? e.touches[0] : e;
+                const dx = point.clientX - startX;
+                const dy = point.clientY - startY;
+
+                // 只有移动超过一定距离才算拖拽，否则算点击
+                if (!isDragging && Math.sqrt(dx*dx + dy*dy) > 5) {
+                    isDragging = true;
+                    hasMoved = true;
+                    
+                    // 开始拖拽逻辑：
+                    // 1. 如果之前是选中状态，先取消选中
+                    if (selectedTile === tile) {
+                        tile.classList.remove('selected');
+                        selectedTile = null;
+                    }
+                    
+                    // 2. 插入占位符
+                    const rect = tile.getBoundingClientRect();
+                    tile.parentNode.insertBefore(placeholder, tile);
+                    
+                    // 3. 切换 Fixed 定位
+                    tile.style.position = 'fixed';
+                    tile.style.left = rect.left + 'px';
+                    tile.style.top = rect.top + 'px';
+                    tile.style.width = rect.width + 'px';
+                    tile.style.height = rect.height + 'px';
+                    
+                    // 4. 记录偏移
+                    tile.dataset.offsetX = point.clientX - rect.left;
+                    tile.dataset.offsetY = point.clientY - rect.top;
+                    
+                    tile.classList.add('dragging');
+                    playSound('click');
+                }
+
+                if (isDragging) {
+                    e.preventDefault();
+                    const offsetX = parseFloat(tile.dataset.offsetX);
+                    const offsetY = parseFloat(tile.dataset.offsetY);
+                    tile.style.left = (point.clientX - offsetX) + 'px';
+                    tile.style.top = (point.clientY - offsetY) + 'px';
+                }
+            };
+
+            const endDrag = (e) => {
+                // 移除监听
+                document.removeEventListener('mousemove', moveDrag);
+                document.removeEventListener('mouseup', endDrag);
+                document.removeEventListener('touchmove', moveDrag);
+                document.removeEventListener('touchend', endDrag);
+
+                if (isDragging) {
+                    // === 拖拽结束逻辑 ===
+                    tile.classList.remove('dragging');
+                    const point = e.changedTouches ? e.changedTouches[0] : e;
+                    
+                    tile.style.visibility = 'hidden';
+                    const elementBelow = document.elementFromPoint(point.clientX, point.clientY);
+                    tile.style.visibility = 'visible';
+                    
+                    const slot = elementBelow ? elementBelow.closest('.slot') : null;
+
+                    if (slot && !slot.classList.contains('filled') && slot.dataset.char) {
+                        if (slot.dataset.char === tile.dataset.char) {
+                            successDrop(tile, slot, placeholder);
+                        } else {
+                            playSound('wrong');
+                            slot.classList.add('wrong');
+                            setTimeout(() => slot.classList.remove('wrong'), 400);
+                            returnToPool(tile, placeholder);
+                        }
+                    } else {
+                        returnToPool(tile, placeholder);
+                    }
+                } else {
+                    // === 点击逻辑 (没有发生拖拽) ===
+                    handleTileClick(tile);
+                }
+            };
+
+            tile.addEventListener('mousedown', startDrag);
+            tile.addEventListener('touchstart', startDrag, {passive: false});
+        }
+
+        function successDrop(tile, slot, placeholder) {
+            // 如果有占位符（拖拽模式），移除它
+            if(placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+            
+            // 清理样式
+            tile.style.position = '';
+            tile.style.left = '';
+            tile.style.top = '';
+            tile.style.width = '';
+            tile.style.height = '';
+            tile.style.zIndex = '';
+            tile.classList.remove('selected'); // 确保移除选中样式
+            
+            // 放入坑位
+            slot.innerHTML = '';
+            slot.appendChild(tile);
+            slot.classList.add('filled');
+            tile.classList.add('placed');
+            
+            playSound('correct');
+            checkWin();
+        }
+
+        function returnToPool(tile, placeholder) {
+            const dest = placeholder.getBoundingClientRect();
+            
+            tile.style.transition = 'left 0.3s ease, top 0.3s ease';
+            tile.style.left = dest.left + 'px';
+            tile.style.top = dest.top + 'px';
+            tile.style.transform = 'scale(1)';
+            
+            setTimeout(() => {
+                tile.style.transition = '';
+                tile.style.position = '';
+                tile.style.left = '';
+                tile.style.top = '';
+                tile.style.width = '';
+                tile.style.height = '';
+                tile.style.transform = '';
+                
+                if(placeholder.parentNode) {
+                    placeholder.parentNode.replaceChild(tile, placeholder);
+                }
+            }, 300);
+        }
+
+        function checkWin() {
+            const total = document.querySelectorAll('.slot[data-char]').length;
+            const filled = document.querySelectorAll('.slot.filled').length;
+            if(total === filled) {
+                clearInterval(gameTimer);
+                playSound('win');
+                setTimeout(() => {
+                    document.getElementById('winTime').textContent = '用时: ' + document.getElementById('timer').textContent;
+                    document.getElementById('winModal').style.display = 'flex';
+                }, 500);
+            }
+        }
+
+        // ================= 辅助功能 =================
+        function setCategory(cat, btn) {
+            currentCategory = cat;
+            document.body.dataset.category = cat;
+            document.querySelectorAll('.btn-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            initGame();
+        }
+
+        function toggleKanaType() {
+            isKatakana = !isKatakana;
+            initGame();
+        }
+
+        function startTimer() {
+            clearInterval(gameTimer);
+            startTime = Date.now();
+            const timerEl = document.getElementById('timer');
+            gameTimer = setInterval(() => {
+                if(isPaused) { startTime += 1000; return; }
+                const diff = Math.floor((Date.now() - startTime) / 1000);
+                const m = String(Math.floor(diff / 60)).padStart(2, '0');
+                const s = String(diff % 60).padStart(2, '0');
+                timerEl.textContent = `${m}:${s}`;
+            }, 1000);
+        }
+
+        function restartGame() { initGame(); }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('muteBtn');
+            btn.textContent = isMuted ? '🔇' : '🔊';
+            btn.style.opacity = isMuted ? '0.5' : '1';
+        }
+
+        function goHome() {
+            if (confirm('确定要返回主页吗？')) {
+                if (window.top) { window.top.location.reload(); } 
+                else { location.reload(); }
+            }
+        }
+
+        function doPause() {
+            isPaused = true;
+            document.getElementById('pause-overlay').style.display = 'flex';
+        }
+
+        function resumeGame() {
+            isPaused = false;
+            document.getElementById('pause-overlay').style.display = 'none';
+        }
+
+        document.body.addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }, { once: true });
+
+        initGame();
+    </script>
+</body>
+</html>

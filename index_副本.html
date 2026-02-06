@@ -37,7 +37,6 @@
             background: var(--bg-sidebar); display: flex; flex-direction: column; 
             flex-shrink: 0; border-right: 1px solid var(--border);
             transition: transform 0.3s ease;
-            /* ✅ 修复：添加滚动条，防止菜单显示不全 */
             overflow-y: auto;
         }
         .app-title { padding: 20px; font-size: 18px; font-weight: bold; color: var(--primary); border-bottom: 1px solid var(--border); }
@@ -60,7 +59,7 @@
         }
         .list-header { padding: 15px; border-bottom: 1px solid var(--border); font-weight: bold; background: #fff; }
         
-        /* 🔍 搜索框样式 */
+        /* 搜索框样式 */
         .search-container {
             padding: 10px 15px;
             border-bottom: 1px solid #eee;
@@ -77,7 +76,7 @@
         }
         .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(217, 48, 37, 0.1); }
 
-        /* 🖊️ 高亮样式 */
+        /* 高亮样式 */
         .highlight {
             background-color: #fff9c4;
             color: #d93025;
@@ -147,7 +146,155 @@
         .g-mean { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
         .g-desc { font-size: 12px; color: #777; line-height: 1.5; }
 
-        /* ================= 📱 移动端适配 ================= */
+        /* ================= 5. 子菜单样式 ================= */
+        .submenu-box {
+            display: none;
+            background-color: #fcfcfc;
+            border-bottom: 1px solid #eee;
+        }
+        .submenu-box.open {
+            display: block;
+        }
+        .nav-item.sub-item {
+            padding-left: 45px;
+            font-size: 13px;
+            color: #666;
+            background: #fafafa;
+        }
+        .nav-item.sub-item:hover {
+            background: #eee;
+        }
+        .nav-item.sub-item.active {
+            background: #fff5f5;
+            color: #d93025;
+            border-right: 3px solid #d93025;
+            font-weight: bold;
+        }
+        .menu-arrow {
+            float: right;
+            font-size: 10px;
+            color: #bbb;
+            transition: transform 0.2s;
+        }
+        .nav-item.open .menu-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* ================= 游戏全屏修复 ================= */
+        #articleContent {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #gameFrame {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .main-text-area {
+            position: relative;
+            z-index: 100;
+        }
+
+        .grammar-sidebar {
+            z-index: 50;
+        }
+
+        .floating-toggle-btn {
+            z-index: 40;
+        }
+
+        iframe {
+            pointer-events: auto !important;
+        }
+
+        /* ================= 游戏控制条 ================= */
+        .game-control-bar {
+            display: none;
+            background: linear-gradient(135deg, #d93025 0%, #c5221f 100%);
+            color: white;
+            padding: 12px 20px;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 10000;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        .game-control-bar.active {
+            display: flex;
+        }
+        .control-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .control-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* ================= 暂停遮罩 ================= */
+        .pause-overlay {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .pause-overlay.active {
+            display: flex;
+        }
+        /* === 下拉菜单样式 (配合你的HTML) === */
+        .submenu-box {
+            display: none; /* 默认隐藏 */
+            background-color: #f1f3f4; /* 稍微深一点的背景，区分层级 */
+            padding-left: 10px;
+        }
+
+        .submenu-box .nav-item {
+            font-size: 0.95em;
+            border-left: 3px solid transparent;
+        }
+
+        .menu-arrow {
+            float: right;
+            transition: transform 0.3s;
+        }
+
+        /* 当父菜单激活时，箭头旋转 */
+        .nav-item.active .menu-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* ================= 移动端适配 ================= */
         @media (max-width: 768px) {
             body { flex-direction: column; padding-top: var(--header-h); }
             .mobile-header { display: flex; }
@@ -157,7 +304,8 @@
                 transform: translateX(-100%); box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             }
             .sidebar.open { transform: translateX(0); }
-            .list-panel { width: 100%; border-right: none; height: 100%; }
+            .list-panel { width: 100%; border-right: none; height: 100%; display: none; }
+            .list-panel.active { display: flex; }
             .list-header { display: none; }
             .content-panel { 
                 position: fixed; top: var(--header-h); bottom: 0; left: 0; right: 0;
@@ -189,20 +337,38 @@
             }
             .floating-toggle-btn span { font-size: 24px; margin: 0; }
             .btn-text { display: none; }
-        }
 
+            /* 手机版游戏控制条 */
+            .game-control-bar {
+                padding: 10px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .control-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+                flex: 1;
+                min-width: 80px;
+            }
+            .control-title {
+                width: 100%;
+                text-align: center;
+                font-size: 14px;
+                order: -1;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <!-- 📱 手机端顶部导航 -->
+    <!-- 手机端顶部导航 -->
     <div class="mobile-header">
         <div class="mh-left">
             <div class="mh-btn" onclick="toggleMobileMenu()">☰</div>
             <span id="mobileTitle">日语写作进阶</span>
         </div>
         <div class="mh-back" id="mobileBackBtn" onclick="backToList()">
-            ⬅️ 返回列表
+            ⬅️ 返回
         </div>
     </div>
 
@@ -223,9 +389,26 @@
         <div class="nav-item" onclick="loadModule('question_grammar', '语法题库')">语法题库</div>
         
         <div class="nav-group-title">日语小游戏</div>
-        <div class="nav-item" onclick="loadModule('game_kana', '五十音图')">五十音图</div>
-        <!-- ✅ 游戏入口 -->
-        <div class="nav-item" onclick="loadGameFrame('games/g01_kana_match.html', '假名连连看')">假名连连看</div>
+        
+        <!-- 五十音图菜单 -->
+        <div class="nav-item" id="nav-kana-parent" onclick="toggleSubMenu('kana-submenu', this)">
+            五十音图小游戏
+            <span class="menu-arrow">▼</span>
+        </div>
+
+        <!-- 五十音子菜单 -->
+        <div class="submenu-box" id="kana-submenu">
+            <div class="nav-item sub-item" onclick="startGameDirectly('kana_match', '🎮 假名连连看')">
+                🎮 假名连连看
+            </div>
+            <div class="nav-item sub-item" onclick="startGameDirectly('kana_puzzle', '🧩 拼图大作战')">
+                🧩 拼图大作战
+            </div>
+            <div class="nav-item sub-item" onclick="startGameDirectly('snake', '🐍 日语贪吃蛇')">
+                🐍 日语贪吃蛇
+            </div>
+        </div>
+
     </div>
 
     <div class="resizer" id="resizerLeft"></div>
@@ -234,7 +417,7 @@
     <div class="list-panel" id="listPanel">
         <div class="list-header" id="moduleTitle">历年真题作文</div>
         
-        <!-- 🔍 搜索框 -->
+        <!-- 搜索框 -->
         <div class="search-container">
             <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜索标题、类型或内容..." oninput="handleSearch()">
         </div>
@@ -251,8 +434,38 @@
                 <span>📖</span> <span class="btn-text">语法解析</span>
             </div>
 
+            <!-- 游戏控制条 ✅ 新增 -->
+            <div class="game-control-bar" id="gameControlBar">
+                <button class="control-btn" onclick="backToMainMenu()">
+                    ⬅️ 返回主页
+                </button>
+                <div class="control-title" id="gameControlTitle">🎮 游戏</div>
+                <button class="control-btn" id="pauseBtn" onclick="toggleGamePause()">
+                    <span id="pauseIcon">⏸</span> <span id="pauseText">暂停</span>
+                </button>
+            </div>
+
             <div id="articleContent">
                 <div style="color:#999; margin-top:100px; text-align:center;">请选择一篇文章开始学习</div>
+            </div>
+
+            <!-- 暂停遮罩 -->
+            <div class="pause-overlay" id="pauseOverlay">
+                <div style="font-size: 48px; color: white; text-align: center;">⏸</div>
+                <div style="font-size: 28px; color: white; font-weight: bold; text-align: center;">游戏已暂停</div>
+                <button onclick="toggleGamePause()" style="
+                    background: #d93025;
+                    color: white;
+                    border: none;
+                    padding: 12px 30px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                " onmouseover="this.style.background='#c5221f'" onmouseout="this.style.background='#d93025'">
+                    ▶️ 继续游戏
+                </button>
             </div>
         </div>
 
@@ -271,369 +484,110 @@
     <audio id="audioPlayer"></audio>
 
     <script>
-        // 全局变量，存储当前模块的数据，用于搜索过滤
-        let currentSheetData = [];
-        let currentSheetName = '';
+    // ================= 1. 菜单交互逻辑 (适配你的HTML) =================
 
-        // ================= 拖拽逻辑 =================
-        function initResize(resizerId, targetId, mode, offsetTargetId = null) {
-            const resizer = document.getElementById(resizerId);
-            const target = document.getElementById(targetId);
-            const offsetTarget = offsetTargetId ? document.getElementById(offsetTargetId) : null;
-            let isResizing = false;
-
-            resizer.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                resizer.classList.add('resizing');
-                document.body.style.cursor = 'col-resize';
-                e.preventDefault();
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isResizing) return;
-                let newWidth = 0;
-                if (mode === 'absolute') {
-                    newWidth = e.clientX;
-                    if (newWidth < 150) newWidth = 150;
-                    if (newWidth > 400) newWidth = 400;
-                } else if (mode === 'relative') {
-                    const leftWidth = offsetTarget.getBoundingClientRect().width;
-                    newWidth = e.clientX - leftWidth;
-                    if (newWidth < 200) newWidth = 200;
-                    if (newWidth > 600) newWidth = 600;
-                } else if (mode === 'right-align') {
-                    newWidth = window.innerWidth - e.clientX;
-                    if (newWidth < 200) newWidth = 200; 
-                    if (newWidth > 600) newWidth = 600;
-                }
-                target.style.width = newWidth + 'px';
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (isResizing) {
-                    isResizing = false;
-                    resizer.classList.remove('resizing');
-                    document.body.style.cursor = 'default';
-                }
-            });
+    // 展开/收起子菜单
+    function toggleSubMenu(menuId, btnElement) {
+        const menu = document.getElementById(menuId);
+        const arrow = btnElement.querySelector('.menu-arrow');
+        
+        if (menu.style.display === 'block') {
+            menu.style.display = 'none';
+            btnElement.classList.remove('active');
+        } else {
+            menu.style.display = 'block';
+            btnElement.classList.add('active');
         }
+    }
 
-        initResize('resizerLeft', 'sidebarLeft', 'absolute');
-        initResize('resizerList', 'listPanel', 'relative', 'sidebarLeft');
-        initResize('resizerRight', 'sidebarRight', 'right-align');
-
-        // ================= 数据加载逻辑 =================
-        window.onload = () => {
-            if(typeof db !== 'undefined') {
-                loadModule('writing_material_exam', '历年真题作文');
-            }
-            initTouchGestures();
+    // 你的HTML调用的就是这个函数 -> 桥接到加载逻辑
+    function startGameDirectly(gameType, title) {
+        // 1. 定义游戏路径映射表
+        const gameMap = {
+            'kana_match':  'games/g01_kana_match.html',       // 连连看
+            'kana_puzzle': 'games/g03_kana_order_puzzle.html',// 拼图
+            'snake':       'games/g04_snake.html'             // 贪吃蛇
         };
 
-        function loadModule(sheetName, title) {
-            document.getElementById('moduleTitle').innerText = title;
-            document.getElementById('mobileTitle').innerText = title;
-            closeAllDrawers();
+        const path = gameMap[gameType];
 
-            // 清空搜索框
-            document.getElementById('searchInput').value = '';
-
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('active');
-                if(el.innerText === title) el.classList.add('active');
-            });
-
-            // 保存当前数据到全局变量
-            currentSheetName = sheetName;
-            currentSheetData = db[sheetName] || [];
-
-            // 初始渲染（无搜索词）
-            renderArticleList(currentSheetData, '');
+        if(path) {
+            // 调用核心加载函数
+            loadGame(path);
+        } else {
+            alert("❌ 未找到该游戏文件，请检查代码配置！");
         }
+    }
 
-        // 🔍 搜索处理函数
-        function handleSearch() {
-            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+    // ================= 2. 核心：沉浸式游戏加载器 =================
+    function loadGame(gamePath) {
+        console.log("启动游戏:", gamePath);
+
+        // 获取页面元素
+        const listPanel = document.querySelector('.list-panel');
+        const contentPanel = document.querySelector('.main-text-area');
+        const grammarSidebar = document.querySelector('.grammar-sidebar');
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.overlay');
+        const mobilePanel = document.querySelector('.content-panel');
+
+        // --- 开启沉浸模式 ---
+        // 1. 隐藏中间列表和右侧语法栏
+        if(listPanel) listPanel.style.display = 'none';
+        if(grammarSidebar) grammarSidebar.style.display = 'none';
+
+        // 2. 准备游戏容器 (全屏)
+        if (contentPanel) {
+            contentPanel.innerHTML = '';
+            contentPanel.style.padding = "0";
+            contentPanel.style.overflow = "hidden";
             
-            if (!keyword) {
-                renderArticleList(currentSheetData, '');
-                return;
-            }
-
-            // 过滤数据：匹配标题、要求、类型或译文
-            const filteredData = currentSheetData.filter(item => {
-                const title = (item.title || '').toLowerCase();
-                const req = (item.requirements || '').toLowerCase();
-                const type = (item.writing_type || item.exam_name || '').toLowerCase();
-                const cn = (item.full_cn || '').toLowerCase();
-                
-                return title.includes(keyword) || req.includes(keyword) || type.includes(keyword) || cn.includes(keyword);
-            });
-
-            renderArticleList(filteredData, keyword);
+            const iframe = document.createElement('iframe');
+            iframe.src = gamePath;
+            iframe.style.width = "100%";
+            iframe.style.height = "100%";
+            iframe.style.border = "none";
+            contentPanel.appendChild(iframe);
         }
 
-        // 🖊️ 高亮辅助函数
-        function highlightText(text, keyword) {
-            if (!text) return '';
-            if (!keyword) return text;
-            const regex = new RegExp(`(${keyword})`, 'gi');
-            return text.replace(regex, '<span class="highlight">$1</span>');
+        // 3. 手机端适配
+        if (window.innerWidth <= 768) {
+            if(sidebar) sidebar.classList.remove('open');
+            if(overlay) overlay.style.display = 'none';
+            if(mobilePanel) mobilePanel.classList.add('active');
         }
+    }
 
-        // 📋 渲染列表函数
-        function renderArticleList(data, keyword) {
-            const listEl = document.getElementById('articleList');
-            listEl.innerHTML = "";
+    // ================= 3. 退出游戏 / 恢复界面逻辑 =================
+    // 这个函数会被游戏里的“返回”按钮调用
+    window.closeGameMode = function() {
+        console.log("退出游戏模式...");
+        
+        const listPanel = document.querySelector('.list-panel');
+        const contentPanel = document.querySelector('.main-text-area');
+        const grammarSidebar = document.querySelector('.grammar-sidebar');
+        
+        // 1. 恢复显示
+        if (listPanel) listPanel.style.display = 'flex';
+        if (grammarSidebar) grammarSidebar.style.display = 'flex';
 
-            if(data.length === 0) {
-                listEl.innerHTML = "<div style='padding:20px;color:#999;text-align:center'>未找到相关内容</div>";
-                return;
-            }
-
-            data.forEach((item) => {
-                const div = document.createElement('div');
-                div.className = 'article-item';
-                
-                let yearDisplay = item.year ? (item.year.replace('年', '') + '年') : '';
-                let typeText = '';
-                
-                if (currentSheetName === 'writing_material_small') {
-                    typeText = item.writing_type || '基础';
-                } else if (currentSheetName === 'writing_material_large') {
-                    typeText = item.exam_name || '综合';
-                } else {
-                    typeText = yearDisplay;
-                }
-
-                // 处理高亮
-                const displayTitle = highlightText(item.title, keyword);
-                const displayType = highlightText(typeText, keyword);
-                const displayDesc = highlightText(item.requirements, keyword);
-
-                div.innerHTML = `
-                    <div class="art-title">${displayTitle}</div>
-                    <div class="art-info">
-                        <span class="tag">${displayType}</span> 
-                        <span class="art-desc">| ${displayDesc}</span>
-                    </div>
-                `;
-                div.onclick = () => loadArticle(item, div);
-                listEl.appendChild(div);
-            });
+        // 2. 恢复文章区域
+        if (contentPanel) {
+            contentPanel.innerHTML = '<div style="padding:50px; text-align:center; color:#999;"><h3>游戏已结束</h3><p>请点击左侧菜单继续学习</p></div>';
+            contentPanel.style.padding = "30px 50px";
+            contentPanel.style.overflow = "auto";
         }
+    };
 
-        function loadArticle(item, domElement) {
-            document.querySelectorAll('.article-item').forEach(e => e.classList.remove('active'));
-            domElement.classList.add('active');
+    // 点击其他非游戏菜单时，也强制退出游戏模式
+    document.addEventListener('DOMContentLoaded', function() {
+        // 排除掉游戏相关的菜单项
+        const otherNavs = document.querySelectorAll('.nav-item:not(.sub-item):not(#nav-kana-parent)');
+        otherNavs.forEach(btn => {
+            btn.addEventListener('click', window.closeGameMode);
+        });
+    });
+</script>
 
-            if (window.innerWidth < 768) {
-                document.getElementById('contentPanel').classList.add('active');
-                document.getElementById('mobileBackBtn').style.display = 'flex';
-                document.querySelector('.mh-left').style.display = 'none';
-            }
-
-            const contentEl = document.getElementById('articleContent');
-            const grammarEl = document.getElementById('grammarList');
-
-            let html = `<h1 class="article-h1">${item.title}</h1>`;
-
-            html += `
-                <div class="toggle-box style-yellow">
-                    <div class="tb-header" onclick="toggleBox(this)">
-                        <div><span class="tb-icon">📋</span>写作要点 / 题目要求</div>
-                        <div class="tb-toggle-hint">(点击收起) <span class="tb-arrow">▼</span></div>
-                    </div>
-                    <div class="tb-content">
-                        ${item.requirements}
-                    </div>
-                </div>
-            `;
-
-            html += `<div class="jp-content">`;
-            if (item.content_struct) {
-                item.content_struct.forEach(paragraph => {
-                    html += `<p>`;
-                    paragraph.forEach(sent => {
-                        html += `<span class="sent-span" onclick="playAudio('${sent.audio}', this)">${sent.furigana}</span>`;
-                    });
-                    html += `</p>`;
-                });
-            }
-            html += `</div>`;
-
-            html += `
-                <div class="toggle-box style-green">
-                    <div class="tb-header" onclick="toggleBox(this)">
-                        <div><span class="tb-icon">🇨🇳</span>参考译文</div>
-                        <div class="tb-toggle-hint">(点击收起) <span class="tb-arrow">▼</span></div>
-                    </div>
-                    <div class="tb-content">
-                        ${item.full_cn.replace(/\n/g, '<br>')}
-                    </div>
-                </div>
-            `;
-            
-            contentEl.innerHTML = html;
-
-            let gHtml = "";
-            if (item.grammar && item.grammar.length > 0) {
-                item.grammar.forEach(g => {
-                    gHtml += `
-                        <div class="grammar-card">
-                            <div class="g-header">
-                                <div class="g-point">${g.point}</div>
-                                <div class="g-level">${g.level || 'N?'}</div>
-                            </div>
-                            <div class="g-mean">${g.meaning}</div>
-                            <div class="g-desc">${g.desc}</div>
-                        </div>
-                    `;
-                });
-            } else {
-                gHtml = "<div style='color:#999;font-size:12px;padding:10px'>暂无语法解析</div>";
-            }
-            grammarEl.innerHTML = gHtml;
-        }
-
-        function playAudio(url, el) {
-            const player = document.getElementById('audioPlayer');
-            document.querySelectorAll('.sent-span').forEach(s => s.classList.remove('playing'));
-            el.classList.add('playing');
-            player.src = url;
-            player.play();
-            player.onended = () => el.classList.remove('playing');
-        }
-
-        function toggleBox(header) {
-            const box = header.parentElement;
-            const hint = header.querySelector('.tb-toggle-hint');
-            box.classList.toggle('closed');
-            if(box.classList.contains('closed')) {
-                hint.innerHTML = '(点击展开) <span class="tb-arrow">▼</span>';
-            } else {
-                hint.innerHTML = '(点击收起) <span class="tb-arrow">▼</span>';
-            }
-        }
-
-        // ================= 📱 手机端逻辑 =================
-        function toggleMobileMenu() {
-            document.getElementById('sidebarLeft').classList.add('open');
-            document.getElementById('overlay').style.display = 'block';
-        }
-
-        function closeAllDrawers() {
-            document.getElementById('sidebarLeft').classList.remove('open');
-            document.getElementById('sidebarRight').classList.remove('open');
-            document.getElementById('overlay').style.display = 'none';
-            if(window.innerWidth < 768) {
-                document.getElementById('floatGrammarBtn').style.display = 'flex';
-            }
-        }
-
-        function backToList() {
-            document.getElementById('contentPanel').classList.remove('active');
-            document.getElementById('mobileBackBtn').style.display = 'none';
-            document.querySelector('.mh-left').style.display = 'flex';
-        }
-
-        function closeGrammar() {
-            if (window.innerWidth < 768) {
-                document.getElementById('sidebarRight').classList.remove('open');
-                document.getElementById('overlay').style.display = 'none';
-                document.getElementById('floatGrammarBtn').style.display = 'flex';
-            } else {
-                document.getElementById('sidebarRight').style.display = 'none';
-                document.getElementById('resizerRight').style.display = 'none';
-                document.getElementById('floatGrammarBtn').style.display = 'flex';
-            }
-        }
-
-        function openGrammar() {
-            if (window.innerWidth < 768) {
-                document.getElementById('sidebarRight').classList.add('open');
-                document.getElementById('overlay').style.display = 'block';
-                document.getElementById('floatGrammarBtn').style.display = 'none';
-            } else {
-                const sidebar = document.getElementById('sidebarRight');
-                sidebar.style.display = 'flex';
-                sidebar.style.width = '300px';
-                document.getElementById('resizerRight').style.display = 'block';
-                document.getElementById('floatGrammarBtn').style.display = 'none';
-            }
-        }
-
-        // ================= 手势滑动逻辑 =================
-        function initTouchGestures() {
-            let touchStartX = 0;
-            let touchEndX = 0;
-            const minSwipeDistance = 50;
-
-            const contentArea = document.getElementById('mainTextArea');
-            contentArea.addEventListener('touchstart', e => {
-                touchStartX = e.changedTouches[0].screenX;
-            }, {passive: true});
-
-            contentArea.addEventListener('touchend', e => {
-                touchEndX = e.changedTouches[0].screenX;
-                if (touchStartX - touchEndX > minSwipeDistance) {
-                    if(window.innerWidth < 768) openGrammar();
-                }
-            }, {passive: true});
-
-            const grammarSidebar = document.getElementById('sidebarRight');
-            grammarSidebar.addEventListener('touchstart', e => {
-                touchStartX = e.changedTouches[0].screenX;
-            }, {passive: true});
-
-            grammarSidebar.addEventListener('touchend', e => {
-                touchEndX = e.changedTouches[0].screenX;
-                if (touchEndX - touchStartX > minSwipeDistance) {
-                    if(window.innerWidth < 768) closeGrammar();
-                }
-            }, {passive: true});
-        }
-
-        // ================= ✅ 新增：加载外部游戏页面的函数 =================
-        function loadGameFrame(url, title) {
-            // 1. 更新顶部标题
-            document.getElementById('moduleTitle').innerText = title;
-            document.getElementById('mobileTitle').innerText = title;
-            closeAllDrawers();
-
-            // 2. 更新侧边栏选中状态
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('active');
-                if(el.innerText === title) el.classList.add('active');
-            });
-
-            // 3. 清空中间列表 (游戏模式下不需要列表)
-            document.getElementById('searchInput').value = '';
-            currentSheetData = []; 
-            const listEl = document.getElementById('articleList');
-            listEl.innerHTML = `<div style="padding:30px 20px;color:#999;text-align:center;font-size:14px;">
-                🎮 <b>${title}</b><br>正在运行中...<br><br>请在右侧区域进行游戏
-            </div>`;
-
-            // 4. 在右侧加载 iframe
-            const contentEl = document.getElementById('articleContent');
-            // 使用 iframe 嵌入，路径就是传入的 url
-            contentEl.innerHTML = `
-                <iframe src="${url}" 
-                        style="width:100%; height:85vh; border:none; border-radius:8px;">
-                </iframe>`;
-            
-            // 隐藏可能存在的旧标题
-            const h1 = document.querySelector('.article-h1');
-            if(h1) h1.style.display = 'none';
-
-            // 5. 移动端适配：直接跳转到右侧内容页
-            if (window.innerWidth < 768) {
-                document.getElementById('contentPanel').classList.add('active');
-                document.getElementById('mobileBackBtn').style.display = 'flex';
-                document.querySelector('.mh-left').style.display = 'none';
-            }
-        }
-    </script>
 </body>
 </html>

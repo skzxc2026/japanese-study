@@ -146,6 +146,123 @@
         .g-mean { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
         .g-desc { font-size: 12px; color: #777; line-height: 1.5; }
 
+        /* ================= 5. 子菜单样式 ================= */
+        .submenu-box {
+            display: none;
+            background-color: #fcfcfc;
+            border-bottom: 1px solid #eee;
+        }
+        .submenu-box.open {
+            display: block;
+        }
+        .nav-item.sub-item {
+            padding-left: 45px;
+            font-size: 13px;
+            color: #666;
+            background: #fafafa;
+        }
+        .nav-item.sub-item:hover {
+            background: #eee;
+        }
+        .nav-item.sub-item.active {
+            background: #fff5f5;
+            color: #d93025;
+            border-right: 3px solid #d93025;
+            font-weight: bold;
+        }
+        .menu-arrow {
+            float: right;
+            font-size: 10px;
+            color: #bbb;
+            transition: transform 0.2s;
+        }
+        .nav-item.open .menu-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* ================= 游戏菜单样式 ================= */
+        .game-menu-container {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .game-menu-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 30px;
+        }
+
+        .difficulty-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .difficulty-btn {
+            padding: 20px;
+            border: 2px solid var(--primary);
+            background: white;
+            color: var(--primary);
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .difficulty-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(217, 48, 37, 0.3);
+        }
+
+        .difficulty-btn.easy { border-color: #4caf50; color: #4caf50; }
+        .difficulty-btn.easy:hover { background: #4caf50; color: white; }
+
+        .difficulty-btn.medium { border-color: #ff9800; color: #ff9800; }
+        .difficulty-btn.medium:hover { background: #ff9800; color: white; }
+
+        .difficulty-btn.hard { border-color: #f44336; color: #f44336; }
+        .difficulty-btn.hard:hover { background: #f44336; color: white; }
+
+        /* ================= 游戏全屏修复 ================= */
+        #articleContent {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #gameFrame {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .main-text-area {
+            position: relative;
+            z-index: 100;
+        }
+
+        .grammar-sidebar {
+            z-index: 50;
+        }
+
+        .floating-toggle-btn {
+            z-index: 40;
+        }
+
+        iframe {
+            pointer-events: auto !important;
+        }
+
         /* ================= 移动端适配 ================= */
         @media (max-width: 768px) {
             body { flex-direction: column; padding-top: var(--header-h); }
@@ -188,42 +305,10 @@
             }
             .floating-toggle-btn span { font-size: 24px; margin: 0; }
             .btn-text { display: none; }
-        }
 
-        /* ================= 5. 子菜单样式 (新增) ================= */
-        .submenu-box {
-            display: none; /* 默认隐藏 */
-            background-color: #fcfcfc;
-            border-bottom: 1px solid #eee;
-        }
-        .submenu-box.open {
-            display: block; /* 激活时显示 */
-        }
-        .nav-item.sub-item {
-            padding-left: 45px; /* 缩进 */
-            font-size: 13px;
-            color: #666;
-            background: #fafafa;
-        }
-        .nav-item.sub-item:hover {
-            background: #eee;
-        }
-        /* 选中子菜单时的样式 */
-        .nav-item.sub-item.active {
-            background: #fff5f5;
-            color: #d93025;
-            border-right: 3px solid #d93025;
-            font-weight: bold;
-        }
-        /* 菜单右侧的小箭头 */
-        .menu-arrow {
-            float: right;
-            font-size: 10px;
-            color: #bbb;
-            transition: transform 0.2s;
-        }
-        .nav-item.open .menu-arrow {
-            transform: rotate(180deg); /* 展开时箭头旋转 */
+            .difficulty-buttons {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -258,36 +343,24 @@
         
         <div class="nav-group-title">日语小游戏</div>
         
-        <!-- ================== 修改后的菜单结构 ================== -->
-
-        <!-- 1. 父菜单：五十音图 (点击只负责展开/折叠) -->
+        <!-- 五十音图菜单 -->
         <div class="nav-item" id="nav-kana-parent" onclick="toggleSubMenu('kana-submenu', this)">
-        五十音图
-        <span class="menu-arrow">▼</span>
+            五十音图
+            <span class="menu-arrow">▼</span>
         </div>
 
-        <!-- 2. 子菜单容器 (所有五十音相关的游戏都放这里面) -->
+        <!-- 五十音子菜单 -->
         <div class="submenu-box" id="kana-submenu">
-    
-        <!-- 游戏 1: 假名连连看 -->
-        <div class="nav-item sub-item" onclick="loadGameFrame('games/g01_kana_match.html', '假名连连看')">
-        🎮 假名连连看
+            <div class="nav-item sub-item" onclick="loadGameMenu('g01_kana_match.html', '🎮 假名连连看')">
+                🎮 假名连连看
+            </div>
+            <div class="nav-item sub-item" onclick="loadGameMenu('g03_kana_order_puzzle.html', '🧩 拼图大作战')">
+                🧩 拼图大作战
+            </div>
+            <div class="nav-item sub-item" onclick="loadGameMenu('g04_snake.html', '🐍 日语贪吃蛇')">
+                🐍 日语贪吃蛇
+            </div>
         </div>
-
-        <!-- 游戏 2: 拼图大作战 (注意文件名要对应) -->
-        <div class="nav-item sub-item" onclick="loadGameFrame('games/g03_kana_order_puzzle.html', '拼图大作战')">
-        🧩 拼图大作战
-        </div>
-
-        <!-- 游戏 3: 贪吃蛇大作战 (注意文件名要对应)-->
-        <div class="nav-item sub-item" onclick="loadGameFrame('game04.html','日语贪吃蛇大作战')">
-            🎮 日语贪吃蛇
-        </div>
-        <!-- 新增：游戏入口代码 END -->
-
-        </div> <!-- 侧边栏结束标签 -->          
-        <!-- 以后有新游戏，继续往这里面加 -->
-
 
     </div>
 
@@ -334,11 +407,13 @@
     <audio id="audioPlayer"></audio>
 
     <script>
-        // 全局变量，存储当前模块的数据，用于搜索过滤
         let currentSheetData = [];
         let currentSheetName = '';
+        let isGamePaused = false;
+        let currentGameUrl = '';
+        let currentGameTitle = '';
+        let gameMenuStack = [];
 
-        // ================= 拖拽逻辑 =================
         function initResize(resizerId, targetId, mode, offsetTargetId = null) {
             const resizer = document.getElementById(resizerId);
             const target = document.getElementById(targetId);
@@ -385,7 +460,6 @@
         initResize('resizerList', 'listPanel', 'relative', 'sidebarLeft');
         initResize('resizerRight', 'sidebarRight', 'right-align');
 
-        // ================= 数据加载逻辑 =================
         window.onload = () => {
             if(typeof db !== 'undefined') {
                 loadModule('writing_material_exam', '历年真题作文');
@@ -398,23 +472,19 @@
             document.getElementById('mobileTitle').innerText = title;
             closeAllDrawers();
 
-            // 清空搜索框
             document.getElementById('searchInput').value = '';
 
             document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.remove('active');
-                if(el.innerText === title) el.classList.add('active');
+                if(el.innerText.includes(title)) el.classList.add('active');
             });
 
-            // 保存当前数据到全局变量
             currentSheetName = sheetName;
             currentSheetData = db[sheetName] || [];
 
-            // 初始渲染（无搜索词）
             renderArticleList(currentSheetData, '');
         }
 
-        // 搜索处理函数
         function handleSearch() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             
@@ -423,7 +493,6 @@
                 return;
             }
 
-            // 过滤数据：匹配标题、要求、类型或译文
             const filteredData = currentSheetData.filter(item => {
                 const title = (item.title || '').toLowerCase();
                 const req = (item.requirements || '').toLowerCase();
@@ -436,7 +505,6 @@
             renderArticleList(filteredData, keyword);
         }
 
-        // 高亮辅助函数
         function highlightText(text, keyword) {
             if (!text) return '';
             if (!keyword) return text;
@@ -444,7 +512,6 @@
             return text.replace(regex, '<span class="highlight">$1</span>');
         }
 
-        // 渲染列表函数
         function renderArticleList(data, keyword) {
             const listEl = document.getElementById('articleList');
             listEl.innerHTML = "";
@@ -469,7 +536,6 @@
                     typeText = yearDisplay;
                 }
 
-                // 处理高亮
                 const displayTitle = highlightText(item.title, keyword);
                 const displayType = highlightText(typeText, keyword);
                 const displayDesc = highlightText(item.requirements, keyword);
@@ -579,7 +645,285 @@
             }
         }
 
-        // ================= 手机端逻辑 =================
+        function toggleSubMenu(menuId, parentEl) {
+            const menu = document.getElementById(menuId);
+            const isOpen = menu.classList.contains('open');
+            
+            document.querySelectorAll('.submenu-box.open').forEach(m => {
+                if (m.id !== menuId) {
+                    m.classList.remove('open');
+                    const parent = m.previousElementSibling;
+                    if (parent) parent.classList.remove('open');
+                }
+            });
+            
+            menu.classList.toggle('open');
+            parentEl.classList.toggle('open');
+        }
+
+        // ================= 游戏菜单系统 ✅ 新增 =================
+        function loadGameMenu(url, title) {
+            // 保存游戏信息到栈
+            gameMenuStack.push({ url: url, title: title });
+            currentGameUrl = url;
+            currentGameTitle = title;
+
+            const contentEl = document.getElementById('articleContent');
+            contentEl.innerHTML = `
+                <div class="game-menu-container">
+                    <div class="game-menu-title">${title}</div>
+                    <div style="margin-bottom: 30px; color: #666; font-size: 14px;">
+                        请选择难度开始游戏
+                    </div>
+                    <div class="difficulty-buttons">
+                        <button class="difficulty-btn easy" onclick="window.parent.startGame('easy')">
+                            🟢 简单
+                        </button>
+                        <button class="difficulty-btn medium" onclick="window.parent.startGame('medium')">
+                            🟡 中等
+                        </button>
+                        <button class="difficulty-btn hard" onclick="window.parent.startGame('hard')">
+                            🔴 困难
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ================= 启动游戏 ✅ 新增 =================
+        function startGame(difficulty) {
+            isGamePaused = false;
+
+            const contentEl = document.getElementById('articleContent');
+            contentEl.style.width = '100%';
+            contentEl.style.height = '100%';
+            contentEl.style.margin = '0';
+            contentEl.style.padding = '0';
+            contentEl.style.overflow = 'hidden';
+            contentEl.style.position = 'absolute';
+            contentEl.style.top = '0';
+            contentEl.style.left = '0';
+            contentEl.style.right = '0';
+            contentEl.style.bottom = '0';
+            
+            const gamePath = `games/${currentGameUrl}?difficulty=${difficulty}`;
+            
+            contentEl.innerHTML = `
+                <div style="
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                ">
+                    <!-- 游戏控制条 -->
+                    <div style="
+                        background: linear-gradient(135deg, #d93025 0%, #c5221f 100%);
+                        color: white;
+                        padding: 12px 20px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                        z-index: 10000;
+                        font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                    ">
+                        <!-- 左侧：返回按钮组 -->
+                        <div style="display: flex; gap: 10px;">
+                            <!-- 返回上一页 -->
+                            <button onclick="window.parent.backToPreviousMenu()" style="
+                                background: rgba(255,255,255,0.2);
+                                border: 1px solid rgba(255,255,255,0.4);
+                                color: white;
+                                padding: 8px 12px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 13px;
+                                font-weight: bold;
+                                transition: all 0.3s;
+                                display: flex;
+                                align-items: center;
+                                gap: 4px;
+                            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                                ⬅️ 上一页
+                            </button>
+
+                            <!-- 返回主页 -->
+                            <button onclick="window.parent.backToList()" style="
+                                background: rgba(255,255,255,0.2);
+                                border: 1px solid rgba(255,255,255,0.4);
+                                color: white;
+                                padding: 8px 12px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 13px;
+                                font-weight: bold;
+                                transition: all 0.3s;
+                                display: flex;
+                                align-items: center;
+                                gap: 4px;
+                            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                                🏠 主页
+                            </button>
+                        </div>
+
+                        <!-- 中间：游戏标题 -->
+                        <div style="
+                            font-size: 16px;
+                            font-weight: bold;
+                            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                        ">
+                            🎮 ${currentGameTitle}
+                        </div>
+
+                        <!-- 右侧：暂停按钮 -->
+                        <button id="pauseBtn" onclick="window.parent.toggleGamePause()" style="
+                            background: rgba(255,255,255,0.2);
+                            border: 1px solid rgba(255,255,255,0.4);
+                            color: white;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: bold;
+                            transition: all 0.3s;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                        " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                            <span id="pauseIcon">⏸</span> <span id="pauseText">暂停</span>
+                        </button>
+                    </div>
+
+                    <!-- 游戏 iframe -->
+                    <iframe 
+                        id="gameFrame"
+                        src="${gamePath}" 
+                        style="
+                            width: 100% !important; 
+                            height: calc(100% - 50px) !important; 
+                            border: none !important; 
+                            display: block !important; 
+                            background: white !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            flex: 1;
+                        " 
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation allow-top-navigation-by-user-activation allow-pointer-lock allow-downloads allow-top-navigation"
+                        allow="autoplay; accelerometer; camera; gyroscope; magnetometer; microphone; payment; usb; fullscreen; picture-in-picture"
+                        title="${currentGameTitle}"
+                        loading="eager"
+                        frameborder="0">
+                    </iframe>
+
+                    <!-- 暂停遮罩层 -->
+                    <div id="pauseOverlay" style="
+                        display: none;
+                        position: absolute;
+                        top: 50px;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0,0,0,0.7);
+                        z-index: 9999;
+                        justify-content: center;
+                        align-items: center;
+                        flex-direction: column;
+                        gap: 20px;
+                    ">
+                        <div style="
+                            font-size: 48px;
+                            color: white;
+                            text-align: center;
+                        ">⏸</div>
+                        <div style="
+                            font-size: 28px;
+                            color: white;
+                            font-weight: bold;
+                            text-align: center;
+                        ">游戏已暂停</div>
+                        <button onclick="window.parent.toggleGamePause()" style="
+                            background: #d93025;
+                            color: white;
+                            border: none;
+                            padding: 12px 30px;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        " onmouseover="this.style.background='#c5221f'" onmouseout="this.style.background='#d93025'">
+                            ▶️ 继续游戏
+                        </button>
+                    </div>
+                </div>`;
+            
+            // 确保 iframe 获得焦点
+            setTimeout(() => {
+                const gameFrame = document.getElementById('gameFrame');
+                if (gameFrame) {
+                    gameFrame.focus();
+                    try {
+                        gameFrame.contentWindow.focus();
+                    } catch(e) {
+                        console.log('iframe focus');
+                    }
+                }
+            }, 300);
+        }
+
+        // ================= 游戏暂停控制函数 ✅ 优化 =================
+        function toggleGamePause() {
+            isGamePaused = !isGamePaused;
+            const pauseOverlay = document.getElementById('pauseOverlay');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const pauseIcon = document.getElementById('pauseIcon');
+            const pauseText = document.getElementById('pauseText');
+            const gameFrame = document.getElementById('gameFrame');
+
+            if (isGamePaused) {
+                // 暂停游戏
+                pauseOverlay.style.display = 'flex';
+                pauseBtn.style.background = 'rgba(255,165,0,0.3)';
+                pauseIcon.textContent = '▶️';
+                pauseText.textContent = '继续';
+                
+                // 禁用 iframe 交互
+                if (gameFrame) {
+                    gameFrame.style.pointerEvents = 'none';
+                    gameFrame.style.opacity = '0.5';
+                }
+            } else {
+                // 继续游戏
+                pauseOverlay.style.display = 'none';
+                pauseBtn.style.background = 'rgba(255,255,255,0.2)';
+                pauseIcon.textContent = '⏸';
+                pauseText.textContent = '暂停';
+                
+                // 启用 iframe 交互
+                if (gameFrame) {
+                    gameFrame.style.pointerEvents = 'auto';
+                    gameFrame.style.opacity = '1';
+                    gameFrame.focus();
+                }
+            }
+        }
+
+        // ================= 返回上一页 ✅ 新增 =================
+        function backToPreviousMenu() {
+            isGamePaused = false;
+            gameMenuStack.pop(); // 移除当前游戏
+
+            if (gameMenuStack.length > 0) {
+                // 返回到上一个菜单
+                const previousGame = gameMenuStack[gameMenuStack.length - 1];
+                loadGameMenu(previousGame.url, previousGame.title);
+            } else {
+                // 没有上一页，返回主列表
+                backToList();
+            }
+        }
+
         function toggleMobileMenu() {
             document.getElementById('sidebarLeft').classList.add('open');
             document.getElementById('overlay').style.display = 'block';
@@ -595,9 +939,72 @@
         }
 
         function backToList() {
-            document.getElementById('contentPanel').classList.remove('active');
-            document.getElementById('mobileBackBtn').style.display = 'none';
-            document.querySelector('.mh-left').style.display = 'flex';
+            // ✅ 重置暂停状态和游戏栈
+            isGamePaused = false;
+            gameMenuStack = [];
+            currentGameUrl = '';
+            currentGameTitle = '';
+
+            // 1. 恢复所有菜单和侧边栏
+            document.getElementById('sidebarLeft').style.display = 'flex';
+            document.getElementById('listPanel').style.display = 'flex';
+            document.getElementById('sidebarRight').style.display = 'flex';
+            document.getElementById('resizerLeft').style.display = 'block';
+            document.getElementById('resizerList').style.display = 'block';
+            document.getElementById('resizerRight').style.display = 'block';
+            
+            // 2. 恢复主区域样式
+            const mainArea = document.getElementById('mainTextArea');
+            mainArea.style.padding = '30px 50px';
+            mainArea.style.margin = '0';
+            mainArea.style.overflow = 'auto';
+            mainArea.style.width = 'auto';
+            mainArea.style.height = 'auto';
+            
+            // 3. 恢复内容区域
+            const contentPanel = document.getElementById('contentPanel');
+            contentPanel.style.width = 'auto';
+            contentPanel.style.height = 'auto';
+            contentPanel.style.position = 'relative';
+            contentPanel.style.top = 'auto';
+            contentPanel.style.left = 'auto';
+            contentPanel.style.right = 'auto';
+            contentPanel.style.bottom = 'auto';
+            contentPanel.style.zIndex = 'auto';
+            
+            // 4. 恢复内容元素
+            const contentEl = document.getElementById('articleContent');
+            contentEl.style.width = 'auto';
+            contentEl.style.height = 'auto';
+            contentEl.style.margin = '0';
+            contentEl.style.padding = '0';
+            contentEl.style.overflow = 'visible';
+            contentEl.style.position = 'relative';
+            contentEl.style.top = 'auto';
+            contentEl.style.left = 'auto';
+            contentEl.style.right = 'auto';
+            contentEl.style.bottom = 'auto';
+            
+            // 5. 清空 iframe
+            contentEl.innerHTML = '<div style="color:#999; margin-top:100px; text-align:center;">请选择一篇文章开始学习</div>';
+            
+            // 6. 移动端处理 - 恢复导航
+            if (window.innerWidth < 768) {
+                document.querySelector('.mobile-header').style.display = 'flex';
+                document.getElementById('mobileBackBtn').style.display = 'none';
+                document.querySelector('.mh-left').style.display = 'flex';
+                
+                // 恢复 body 的 padding
+                document.body.style.paddingTop = 'var(--header-h)';
+                
+                // 内容区域恢复
+                document.getElementById('contentPanel').style.position = 'relative';
+                document.getElementById('contentPanel').style.top = 'auto';
+                document.getElementById('contentPanel').style.left = 'auto';
+                document.getElementById('contentPanel').style.right = 'auto';
+                document.getElementById('contentPanel').style.bottom = 'auto';
+                document.getElementById('contentPanel').style.zIndex = 'auto';
+            }
         }
 
         function closeGrammar() {
@@ -626,7 +1033,6 @@
             }
         }
 
-        // ================= 手势滑动逻辑 =================
         function initTouchGestures() {
             let touchStartX = 0;
             let touchEndX = 0;
@@ -656,215 +1062,6 @@
                 }
             }, {passive: true});
         }
-
-        // ================= 加载外部游戏页面的函数 =================
-        function loadGameFrame(url, title) {
-            // 1. 更新顶部标题
-            document.getElementById('moduleTitle').innerText = title;
-            document.getElementById('mobileTitle').innerText = title;
-            closeAllDrawers();
-
-            // 2. 更新侧边栏选中状态
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('active');
-                if(el.innerText === title) el.classList.add('active');
-            });
-
-            // 3. 清空中间列表 (游戏模式下不需要列表)
-            document.getElementById('searchInput').value = '';
-            currentSheetData = []; 
-            const listEl = document.getElementById('articleList');
-            listEl.innerHTML = `<div style="padding:30px 20px;color:#999;text-align:center;font-size:14px;">
-                🎮 <b>${title}</b><br>正在运行中...<br><br>请在右侧区域进行游戏
-            </div>`;
-
-            // 4. 在右侧加载 iframe
-            const contentEl = document.getElementById('articleContent');
-            // 使用 iframe 嵌入，路径就是传入的 url
-            contentEl.innerHTML = `
-                <iframe src="${url}" 
-                        style="width:100%; height:85vh; border:none; border-radius:8px;">
-                </iframe>`;
-            
-            // 隐藏可能存在的旧标题
-            const h1 = document.querySelector('.article-h1');
-            if(h1) h1.style.display = 'none';
-
-            // 5. 移动端适配：直接跳转到右侧内容页
-            if (window.innerWidth < 768) {
-                document.getElementById('contentPanel').classList.add('active');
-                document.getElementById('mobileBackBtn').style.display = 'flex';
-                document.querySelector('.mh-left').style.display = 'none';
-            }
-        }
-    
-        // ================= 菜单折叠/展开逻辑 =================
-        function toggleSubMenu(menuId, parentEl) {
-            const menu = document.getElementById(menuId);
-            if (menu.style.display === 'block') {
-                menu.style.display = 'none';
-                parentEl.classList.remove('open');
-            } else {
-                menu.style.display = 'block';
-                parentEl.classList.add('open');
-            }
-        }
-        
     </script>
-    <script>
-    // 1. 定义加载游戏的函数
-    function loadGame() {
-        console.log("正在启动游戏..."); // 用于调试
-
-        // --- UI 状态更新 ---
-        // 移除其他导航的高亮
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        // 高亮游戏按钮
-        const gameBtn = document.getElementById('nav-game-snake');
-        if(gameBtn) gameBtn.classList.add('active');
-
-        // --- 准备容器 ---
-        const contentPanel = document.querySelector('.main-text-area');
-        const grammarSidebar = document.querySelector('.grammar-sidebar');
-        
-        if (!contentPanel) {
-            alert("错误：找不到内容显示区域 (.main-text-area)");
-            return;
-        }
-
-        // --- 调整样式以适应游戏 ---
-        // 1. 去掉内边距，让游戏全屏
-        contentPanel.style.padding = "0";
-        contentPanel.style.overflow = "hidden"; 
-        
-        // 2. 隐藏右侧的语法栏（如果有），给游戏腾出空间
-        if (grammarSidebar) grammarSidebar.style.display = 'none';
-
-        // --- 插入游戏 iframe ---
-        // ⚠️ 重点：路径必须正确。假设 index.html 同级有个 games 文件夹
-        contentPanel.innerHTML = `
-            <iframe src="games/game04.html" 
-                    style="width: 100%; height: 100%; border: none; display: block;" 
-                    allow="autoplay"
-                    title="日语贪吃蛇">
-            </iframe>
-        `;
-
-        // --- 移动端适配 (解决手机打不开的问题) ---
-        if (window.innerWidth <= 768) {
-            // 关闭侧边栏
-            document.querySelector('.sidebar').classList.remove('open');
-            document.querySelector('.overlay').style.display = 'none';
-            // 强制显示内容区域 (关键！)
-            document.querySelector('.content-panel').classList.add('active');
-        }
-    }
-
-    // 2. 监听其他导航点击，用于“退出游戏”恢复界面
-    // 等待页面加载完成
-    document.addEventListener('DOMContentLoaded', function() {
-        // 找到所有非游戏的导航项
-        const otherNavs = document.querySelectorAll('.nav-item:not(#nav-game-snake)');
-        
-        otherNavs.forEach(btn => {
-            btn.addEventListener('click', function() {
-                // 恢复 contentPanel 的样式
-                const contentPanel = document.querySelector('.main-text-area');
-                if (contentPanel) {
-                    contentPanel.style.padding = "30px 50px"; // 恢复原来的内边距
-                    contentPanel.style.overflow = "auto";     // 恢复滚动条
-                }
-                
-                // 恢复语法侧边栏
-                const grammarSidebar = document.querySelector('.grammar-sidebar');
-                if (grammarSidebar) {
-                    grammarSidebar.style.display = 'flex'; // 或者 block，根据你原本的css
-                }
-            });
-        });
-    });
-    </script>
-<script>
-    // ================= 游戏加载逻辑 =================
-    function loadGame(e) {
-        // 阻止事件冒泡，防止被其他逻辑拦截
-        if(e) e.stopPropagation();
-
-        console.log("正在启动游戏...");
-
-        // 1. 获取关键元素
-        const contentPanel = document.querySelector('.main-text-area');
-        const grammarSidebar = document.querySelector('.grammar-sidebar');
-        const sidebar = document.querySelector('.sidebar');
-        const overlay = document.querySelector('.overlay');
-        const mobilePanel = document.querySelector('.content-panel');
-
-        if (!contentPanel) {
-            alert("错误：找不到内容显示区域 (.main-text-area)，请检查HTML结构");
-            return;
-        }
-
-        // 2. UI 状态更新（高亮按钮）
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        const gameBtn = document.getElementById('nav-game-snake');
-        if(gameBtn) gameBtn.classList.add('active');
-
-        // 3. 准备游戏容器
-        // 清空原有文章内容
-        contentPanel.innerHTML = '';
-        // 去除内边距，让游戏全屏
-        contentPanel.style.padding = "0";
-        contentPanel.style.overflow = "hidden"; 
-
-        // 4. 隐藏右侧语法栏（给游戏腾空间）
-        if (grammarSidebar) grammarSidebar.style.display = 'none';
-
-        // 5. 插入游戏 iframe
-        // ⚠️ 请确保 games/game04.html 路径正确
-        const iframe = document.createElement('iframe');
-        iframe.src = "games/game04.html"; 
-        iframe.style.width = "100%";
-        iframe.style.height = "100%";
-        iframe.style.border = "none";
-        iframe.style.display = "block";
-        
-        // 添加加载失败的检测
-        iframe.onerror = function() {
-            alert("❌ 无法加载游戏！\n请检查 games 文件夹下是否有 game04.html 文件");
-        };
-
-        contentPanel.appendChild(iframe);
-
-        // 6. 移动端适配（手机上点击后自动收起菜单）
-        if (window.innerWidth <= 768) {
-            if(sidebar) sidebar.classList.remove('open');
-            if(overlay) overlay.style.display = 'none';
-            if(mobilePanel) mobilePanel.classList.add('active'); // 强制显示内容区
-        }
-    }
-
-    // ================= 退出游戏逻辑 =================
-    // 监听其他导航点击，用于恢复界面
-    document.addEventListener('DOMContentLoaded', function() {
-        const otherNavs = document.querySelectorAll('.nav-item:not(#nav-game-snake)');
-        otherNavs.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const contentPanel = document.querySelector('.main-text-area');
-                const grammarSidebar = document.querySelector('.grammar-sidebar');
-                
-                // 恢复样式
-                if (contentPanel) {
-                    contentPanel.style.padding = "30px 50px"; 
-                    contentPanel.style.overflow = "auto";     
-                }
-                // 恢复语法侧边栏
-                if (grammarSidebar) {
-                    grammarSidebar.style.display = 'flex';
-                }
-            });
-        });
-    });
-</script>
-
-</body> 
+</body>
 </html>

@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>假名消消乐 V8.0 (拖拽版)</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-main: #2d3436;
+            --font-cn: "Microsoft YaHei", "PingFang SC", sans-serif;
+            --font-jp: "M PLUS Rounded 1c", sans-serif;
+            
+            /* 品牌色 */
+            --c-green: #00b894;
+            --c-blue: #0984e3;
+            --c-purple: #6c5ce7;
+            --c-red: #d63031;
+        }
+
+        body {
+            font-family: var(--font-cn);
+            background-color: var(--bg-color);
+            margin: 0; height: 100vh;
+            overflow: hidden; user-select: none;
+            color: var(--text-main);
+        }
+
+        /* ================= 布局容器 ================= */
+        .app-container {
+            display: flex;
+            width: 100%; height: 100%;
+            position: relative;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* 左侧：主菜单面板 */
+        .left-panel {
+            flex: 1;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: white;
+            z-index: 10;
+            box-shadow: 5px 0 30px rgba(0,0,0,0.05);
+            transition: all 0.5s ease;
+            padding: 20px;
+        }
+        
+        .app-container.mode-active .left-panel {
+            flex: 0 0 35%; 
+            align-items: flex-end; 
+            padding-right: 40px;
+            background: #f1f2f6; 
+        }
+
+        /* 右侧：子菜单面板 */
+        .right-panel {
+            flex: 0; width: 0; opacity: 0;
+            background: white;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            overflow: hidden;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .app-container.mode-active .right-panel {
+            flex: 1; width: auto; opacity: 1;
+        }
+
+        /* ================= 左侧内容设计 ================= */
+        .title-area {
+            text-align: center; margin-bottom: 40px;
+            transition: transform 0.4s;
+        }
+        .app-title {
+            font-size: 48px; font-weight: 900; color: #333;
+            letter-spacing: 2px; margin: 0;
+        }
+        .app-subtitle { color: #b2bec3; font-size: 16px; margin-top: 5px; font-weight: bold; }
+
+        .menu-list {
+            display: flex; flex-direction: column; gap: 20px;
+            width: 100%; max-width: 320px;
+        }
+
+        .mode-card {
+            background: white; border-radius: 20px; padding: 20px 25px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; transition: all 0.3s;
+            border: 2px solid transparent;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            position: relative; overflow: hidden;
+        }
+        
+        .icon-circle {
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; color: white; margin-right: 15px; flex-shrink: 0;
+        }
+
+        .mode-info { flex: 1; }
+        .m-title { font-size: 20px; font-weight: bold; color: #2d3436; }
+        .m-desc { font-size: 12px; color: #aaa; margin-top: 2px; }
+        .arrow { color: #ddd; font-weight: bold; transition: 0.3s; }
+
+        .mc-green .icon-circle { background: linear-gradient(135deg, #55efc4, #00b894); }
+        .mc-blue .icon-circle  { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+        .mc-purple .icon-circle{ background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+        .mc-red .icon-circle   { background: linear-gradient(135deg, #ff7675, #d63031); }
+
+        .mode-card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .mode-card:hover .arrow { color: #333; transform: translateX(5px); }
+
+        .app-container.mode-active .mode-card {
+            padding: 15px; background: white; opacity: 0.6; transform: scale(0.95);
+        }
+        .app-container.mode-active .mode-card.active {
+            opacity: 1; border-color: var(--active-color);
+            transform: scale(1.05) translateX(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 2;
+        }
+
+        /* ================= 右侧内容设计 ================= */
+        .sub-content {
+            width: 90%; max-width: 450px; padding: 20px;
+            animation: slideIn 0.4s 0.1s backwards;
+        }
+        
+        .sub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .sub-title { font-size: 28px; font-weight: 800; color: #333; }
+        
+        .chapter-grid { display: grid; gap: 15px; }
+        
+        .chapter-item {
+            background: white; border: 1px solid #eee;
+            border-radius: 16px; padding: 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; transition: 0.2s;
+        }
+        .chapter-item:hover {
+            border-color: var(--active-color); background: #fdfdfd;
+            transform: translateX(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .cp-left h3 { margin: 0; font-size: 18px; color: #333; }
+        .cp-left p { margin: 5px 0 0; font-size: 13px; color: #999; }
+        .cp-tag {
+            font-size: 12px; font-weight: bold; padding: 5px 12px;
+            border-radius: 20px; background: #f0f0f0; color: #666;
+        }
+
+        .timer-switch {
+            display: flex; align-items: center; gap: 10px;
+            background: #fff; padding: 8px 16px; border-radius: 30px;
+            border: 1px solid #eee; font-size: 14px; font-weight: bold; color: #555;
+        }
+        .switch-ui {
+            width: 40px; height: 22px; background: #ccc; border-radius: 22px;
+            position: relative; transition: 0.3s; cursor: pointer;
+        }
+        .switch-ui::after {
+            content:''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+            background: white; border-radius: 50%; transition: 0.3s;
+        }
+        input:checked + .switch-ui { background: #ff6b6b; }
+        input:checked + .switch-ui::after { transform: translateX(18px); }
+
+        .close-sub-btn { display: none; font-size: 24px; color: #999; cursor: pointer; }
+
+        /* ================= 3. 游戏界面 ================= */
+        .game-screen {
+            display: none; flex-direction: column; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 200;
+            background: #fdfbf7;
+        }
+        
+        .header {
+            padding: 15px 20px; background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); z-index: 10;
+        }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        /* 顶部按钮组 */
+        .btn-group { display: flex; gap: 10px; align-items: center; }
+        .icon-btn {
+            border: none; background: #eee; width: 40px; height: 40px; border-radius: 50%;
+            font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s;
+        }
+        .icon-btn:active { transform: scale(0.9); background: #ddd; }
+
+        .lvl-info { font-size: 20px; font-weight: 900; color: #2c3e50; }
+        .timer-display { font-size: 24px; font-weight: bold; color: #e74c3c; font-family: monospace; }
+        
+        .progress-track { width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #2ecc71; width: 0%; transition: width 0.3s; }
+
+        .board {
+            flex: 1; padding: 20px;
+            display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+            gap: 15px; overflow-y: auto;
+            /* 防止触摸时整个页面滚动 */
+            touch-action: none; 
+        }
+
+        /* 卡片样式升级：支持拖拽 */
+        .card {
+            width: 75px; height: 75px; border-radius: 18px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 26px; font-weight: bold; cursor: grab; 
+            position: relative; /* 必须相对定位以便位移 */
+            background: white; color: #555;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.1); 
+            opacity: 0; transform: translateY(20px);
+            touch-action: none; /* 关键：禁止浏览器默认触摸行为 */
+            z-index: 1;
+            transition: transform 0.2s, opacity 0.2s; /* 默认状态下的过渡 */
+        }
+        
+        .card.show { opacity: 1; transform: translateY(0); }
+        
+        /* 拖拽中状态 */
+        .card.dragging {
+            z-index: 1000; /* 浮在最上层 */
+            transform: scale(1.2); /* 放大 */
+            opacity: 0.9;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            cursor: grabbing;
+            transition: none; /* 拖拽时取消过渡，保证跟手 */
+        }
+
+        .card.matched { transform: scale(0); opacity: 0; transition: 0.4s; pointer-events: none; }
+        
+        /* 错误震动 */
+        .card.wrong { animation: shake 0.4s; background: #ff7675 !important; color: white !important; }
+
+        .card.color-a { background: var(--c1-bg); color: var(--c1-txt); box-shadow: 0 6px 0 var(--c1-shadow); }
+        .card.color-b { background: var(--c2-bg); color: var(--c2-txt); box-shadow: 0 6px 0 var(--c2-shadow); }
+        .card.romaji { font-family: "Varela Round", sans-serif; font-size: 20px; }
+        .card.kana { font-family: var(--font-jp); }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 300;
+            display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .modal.open { display: flex; opacity: 1; }
+        .modal-box {
+            background: white; width: 85%; max-width: 320px;
+            border-radius: 24px; padding: 30px; text-align: center;
+            transform: translateY(50px); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal.open .modal-box { transform: translateY(0); }
+        
+        .modal h2 { font-size: 28px; color: #2d3436; margin: 0 0 10px; }
+        .stat-row { display: flex; justify-content: center; gap: 20px; margin: 20px 0; }
+        .stat-item { display: flex; flex-direction: column; }
+        .stat-val { font-size: 24px; font-weight: 900; color: #00b894; }
+        .stat-label { font-size: 12px; color: #b2bec3; }
+        
+        .btn-primary {
+            background: #0984e3; color: white; border: none;
+            padding: 12px 30px; border-radius: 50px; font-size: 16px; font-weight: bold;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(9, 132, 227, 0.4);
+            transition: 0.2s; width: 100%;
+        }
+        .btn-primary:active { transform: scale(0.95); }
+
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .left-panel { flex: 1; width: 100%; padding: 20px; }
+            .app-container.mode-active .left-panel { flex: 0 0 auto; height: 120px; align-items: center; padding: 10px; flex-direction: row; justify-content: space-between; z-index: 20; }
+            .app-container.mode-active .title-area { text-align: left; margin: 0; transform: scale(0.7); transform-origin: left center; }
+            .app-container.mode-active .menu-list { display: none; }
+            
+            .right-panel { width: 100%; }
+            .close-sub-btn { display: block; }
+            
+            .card { width: 60px; height: 60px; font-size: 22px; }
+            .board { gap: 10px; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="appContainer">
+        <!-- 左侧：模式选择 -->
+        <div class="left-panel">
+            <div class="title-area">
+                <h1 class="app-title">五十音</h1>
+                <div class="app-subtitle">消消乐大作战</div>
+            </div>
+            
+            <div class="menu-list">
+                <div class="mode-card mc-green" onclick="selectMode('seion', this, '#00b894', '#dcfce7')">
+                    <div class="icon-circle">清</div>
+                    <div class="mode-info">
+                        <div class="m-title">清音挑战</div>
+                        <div class="m-desc">基础五十音 (あ-ん)</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </div>
+                <div class="mode-card mc-blue" onclick="selectMode('dakuon', this, '#0984e3', '#dbeafe')">
+                    <div class="icon-circle">浊</div>
+                    <div class="mode-info">
+                        <div class="m-title">浊音挑战</div>
+                        <div class="m-desc">点点与圈圈 (が-ぽ)</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </div>
+                <div class="mode-card mc-purple" onclick="selectMode('yoon', this, '#6c5ce7', '#f3e8ff')">
+                    <div class="icon-circle">拗</div>
+                    <div class="mode-info">
+                        <div class="m-title">拗音挑战</div>
+                        <div class="m-desc">组合发音 (きゃ-ぴょ)</div>
+                    </div>
+                    <div class="arrow">→</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：关卡选择 -->
+        <div class="right-panel">
+            <div class="sub-content">
+                <div class="sub-header">
+                    <div class="sub-title">选择关卡</div>
+                    <div class="close-sub-btn" onclick="resetMode()">×</div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label class="timer-switch">
+                        <input type="checkbox" id="timerMode" style="display:none">
+                        <div class="switch-ui"></div>
+                        <span>限时模式 (60秒)</span>
+                    </label>
+                </div>
+
+                <div class="chapter-grid" id="chapterList">
+                    <!-- JS生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div class="game-screen" id="gameScreen">
+        <div class="header">
+            <div class="top-row">
+                <div class="btn-group">
+                    <button class="icon-btn" onclick="exitGame()">🔙</button>
+                    <div class="lvl-info" id="gameTitle">Level 1</div>
+                </div>
+                <div class="timer-display" id="gameTimer">00:00</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <div class="board" id="gameBoard"></div>
+    </div>
+
+    <!-- 结算弹窗 -->
+    <div class="modal" id="resultModal">
+        <div class="modal-box">
+            <h2 id="resTitle">🎉 挑战成功</h2>
+            <div class="stat-row">
+                <div class="stat-item">
+                    <span class="stat-val" id="resTime">45s</span>
+                    <span class="stat-label">耗时</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-val" id="resScore">100</span>
+                    <span class="stat-label">得分</span>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="closeModal()">返回菜单</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= 1. 数据定义 =================
+        const DATA = {
+            seion: [
+                { id: 'a', kana: 'あ', roma: 'a' }, { id: 'i', kana: 'い', roma: 'i' }, { id: 'u', kana: 'う', roma: 'u' }, { id: 'e', kana: 'え', roma: 'e' }, { id: 'o', kana: 'お', roma: 'o' },
+                { id: 'ka', kana: 'か', roma: 'ka' }, { id: 'ki', kana: 'き', roma: 'ki' }, { id: 'ku', kana: 'く', roma: 'ku' }, { id: 'ke', kana: 'け', roma: 'ke' }, { id: 'ko', kana: 'こ', roma: 'ko' },
+                { id: 'sa', kana: 'さ', roma: 'sa' }, { id: 'shi', kana: 'し', roma: 'shi' }, { id: 'su', kana: 'す', roma: 'su' }, { id: 'se', kana: 'せ', roma: 'se' }, { id: 'so', kana: 'そ', roma: 'so' },
+                { id: 'ta', kana: 'た', roma: 'ta' }, { id: 'chi', kana: 'ち', roma: 'chi' }, { id: 'tsu', kana: 'つ', roma: 'tsu' }, { id: 'te', kana: 'て', roma: 'te' }, { id: 'to', kana: 'と', roma: 'to' },
+                { id: 'na', kana: 'な', roma: 'na' }, { id: 'ni', kana: 'に', roma: 'ni' }, { id: 'nu', kana: 'ぬ', roma: 'nu' }, { id: 'ne', kana: 'ね', roma: 'ne' }, { id: 'no', kana: 'の', roma: 'no' },
+                { id: 'ha', kana: 'は', roma: 'ha' }, { id: 'hi', kana: 'ひ', roma: 'hi' }, { id: 'fu', kana: 'ふ', roma: 'fu' }, { id: 'he', kana: 'へ', roma: 'he' }, { id: 'ho', kana: 'ほ', roma: 'ho' },
+                { id: 'ma', kana: 'ま', roma: 'ma' }, { id: 'mi', kana: 'み', roma: 'mi' }, { id: 'mu', kana: 'む', roma: 'mu' }, { id: 'me', kana: 'め', roma: 'me' }, { id: 'mo', kana: 'も', roma: 'mo' },
+                { id: 'ya', kana: 'や', roma: 'ya' }, { id: 'yu', kana: 'ゆ', roma: 'yu' }, { id: 'yo', kana: 'よ', roma: 'yo' },
+                { id: 'ra', kana: 'ら', roma: 'ra' }, { id: 'ri', kana: 'り', roma: 'ri' }, { id: 'ru', kana: 'る', roma: 'ru' }, { id: 're', kana: 'れ', roma: 're' }, { id: 'ro', kana: 'ろ', roma: 'ro' },
+                { id: 'wa', kana: 'わ', roma: 'wa' }, { id: 'wo', kana: 'を', roma: 'wo' }, { id: 'n', kana: 'ん', roma: 'n' }
+            ],
+            dakuon: [
+                { id: 'ga', kana: 'が', roma: 'ga' }, { id: 'gi', kana: 'ぎ', roma: 'gi' }, { id: 'gu', kana: 'ぐ', roma: 'gu' }, { id: 'ge', kana: 'げ', roma: 'ge' }, { id: 'go', kana: 'ご', roma: 'go' },
+                { id: 'za', kana: 'ざ', roma: 'za' }, { id: 'ji', kana: 'じ', roma: 'ji' }, { id: 'zu', kana: 'ず', roma: 'zu' }, { id: 'ze', kana: 'ぜ', roma: 'ze' }, { id: 'zo', kana: 'ぞ', roma: 'zo' },
+                { id: 'da', kana: 'だ', roma: 'da' }, { id: 'ji_d', kana: 'ぢ', roma: 'ji' }, { id: 'zu_d', kana: 'づ', roma: 'zu' }, { id: 'de', kana: 'で', roma: 'de' }, { id: 'do', kana: 'ど', roma: 'do' },
+                { id: 'ba', kana: 'ば', roma: 'ba' }, { id: 'bi', kana: 'び', roma: 'bi' }, { id: 'bu', kana: 'ぶ', roma: 'bu' }, { id: 'be', kana: 'べ', roma: 'be' }, { id: 'bo', kana: 'ぼ', roma: 'bo' },
+                { id: 'pa', kana: 'ぱ', roma: 'pa' }, { id: 'pi', kana: 'ぴ', roma: 'pi' }, { id: 'pu', kana: 'ぷ', roma: 'pu' }, { id: 'pe', kana: 'ぺ', roma: 'pe' }, { id: 'po', kana: 'ぽ', roma: 'po' }
+            ],
+            yoon: [
+                { id: 'kya', kana: 'きゃ', roma: 'kya' }, { id: 'kyu', kana: 'きゅ', roma: 'kyu' }, { id: 'kyo', kana: 'きょ', roma: 'kyo' },
+                { id: 'sha', kana: 'しゃ', roma: 'sha' }, { id: 'shu', kana: 'しゅ', roma: 'shu' }, { id: 'sho', kana: 'しょ', roma: 'sho' },
+                { id: 'cha', kana: 'ちゃ', roma: 'cha' }, { id: 'chu', kana: 'ちゅ', roma: 'chu' }, { id: 'cho', kana: 'ちょ', roma: 'cho' },
+                { id: 'nya', kana: 'nya', roma: 'nya' }, { id: 'nyu', kana: 'nyu', roma: 'nyu' }, { id: 'nyo', kana: 'nyo', roma: 'nyo' },
+                { id: 'hya', kana: 'hya', roma: 'hya' }, { id: 'hyu', kana: 'hyu', roma: 'hyu' }, { id: 'hyo', kana: 'hyo', roma: 'hyo' },
+                { id: 'mya', kana: 'mya', roma: 'mya' }, { id: 'myu', kana: 'myu', roma: 'myu' }, { id: 'myo', kana: 'myo', roma: 'myo' },
+                { id: 'rya', kana: 'rya', roma: 'rya' }, { id: 'ryu', kana: 'ryu', roma: 'ryu' }, { id: 'ryo', kana: 'ryo', roma: 'ryo' },
+                { id: 'gya', kana: 'gya', roma: 'gya' }, { id: 'gyu', kana: 'gyu', roma: 'gyu' }, { id: 'gyo', kana: 'gyo', roma: 'gyo' },
+                { id: 'ja', kana: 'ja', roma: 'ja' }, { id: 'ju', kana: 'ju', roma: 'ju' }, { id: 'jo', kana: 'jo', roma: 'jo' },
+                { id: 'bya', kana: 'bya', roma: 'bya' }, { id: 'byu', kana: 'byu', roma: 'byu' }, { id: 'byo', kana: 'byo', roma: 'byo' },
+                { id: 'pya', kana: 'pya', roma: 'pya' }, { id: 'pyu', kana: 'pyu', roma: 'pyu' }, { id: 'pyo', kana: 'pyo', roma: 'pyo' }
+            ]
+        };
+
+        // ================= 2. 状态管理 =================
+        let currentMode = '';
+        let currentLevel = 0;
+        let gameTimer = null;
+        let startTime = 0;
+        let matchedCount = 0;
+        let totalPairs = 0;
+        let isTimeMode = false;
+
+        // 颜色配置
+        const THEMES = {
+            seion: { main: '#00b894', bg: '#dcfce7', c1: {bg:'#e0f2f1', txt:'#00695c', s:'#b2dfdb'}, c2: {bg:'#e8f5e9', txt:'#2e7d32', s:'#c8e6c9'} },
+            dakuon: { main: '#0984e3', bg: '#dbeafe', c1: {bg:'#e3f2fd', txt:'#1565c0', s:'#bbdefb'}, c2: {bg:'#e8eaf6', txt:'#283593', s:'#c5cae9'} },
+            yoon: { main: '#6c5ce7', bg: '#f3e8ff', c1: {bg:'#f3e5f5', txt:'#6a1b9a', s:'#e1bee7'}, c2: {bg:'#ede7f6', txt:'#4527a0', s:'#d1c4e9'} }
+        };
+
+        // ================= 3. 🔊 声音系统 (AudioContext) =================
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playSound(type) {
+            switch(type) {
+                case 'click': playTone(400, 'triangle', 0.1); break; // 拿起
+                case 'match': playTone(800, 'sine', 0.2); break;     // 匹配成功
+                case 'wrong': playTone(150, 'sawtooth', 0.3); break; // 错误
+                case 'win': 
+                    setTimeout(() => playTone(500, 'sine', 0.2), 0);
+                    setTimeout(() => playTone(600, 'sine', 0.2), 200);
+                    setTimeout(() => playTone(800, 'sine', 0.4), 400);
+                    break;
+            }
+        }
+
+        // ================= 4. 界面交互 =================
+        function selectMode(mode, el, color, bgColor) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            
+            document.documentElement.style.setProperty('--active-color', color);
+            document.getElementById('appContainer').classList.add('mode-active');
+            
+            renderChapters(mode);
+        }
+
+        function resetMode() {
+            document.getElementById('appContainer').classList.remove('mode-active');
+            setTimeout(() => {
+                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+            }, 300);
+        }
+
+        function renderChapters(mode) {
+            const list = document.getElementById('chapterList');
+            list.innerHTML = '';
+            
+            const data = DATA[mode];
+            const step = 5; // 每关5对
+            const totalLevels = Math.ceil(data.length / step);
+
+            for(let i=0; i<totalLevels; i++) {
+                const start = i * step;
+                const end = Math.min(start + step, data.length);
+                const chars = data.slice(start, end).map(d => d.kana).join(' ');
+                
+                const div = document.createElement('div');
+                div.className = 'chapter-item';
+                div.innerHTML = `
+                    <div class="cp-left">
+                        <h3>第 ${i+1} 关</h3>
+                        <p>${chars}</p>
+                    </div>
+                    <div class="cp-tag">开始挑战</div>
+                `;
+                div.onclick = () => initLevel(i);
+                list.appendChild(div);
+            }
+        }
+
+        // ================= 5. 游戏核心逻辑 (拖拽版) =================
+        function initLevel(levelIdx) {
+            currentLevel = levelIdx;
+            isTimeMode = document.getElementById('timerMode').checked;
+            
+            const theme = THEMES[currentMode];
+            document.documentElement.style.setProperty('--c1-bg', theme.c1.bg);
+            document.documentElement.style.setProperty('--c1-txt', theme.c1.txt);
+            document.documentElement.style.setProperty('--c1-shadow', theme.c1.s);
+            document.documentElement.style.setProperty('--c2-bg', theme.c2.bg);
+            document.documentElement.style.setProperty('--c2-txt', theme.c2.txt);
+            document.documentElement.style.setProperty('--c2-shadow', theme.c2.s);
+
+            document.getElementById('gameScreen').style.display = 'flex';
+            document.getElementById('gameTitle').textContent = `第 ${levelIdx + 1} 关`;
+            
+            // 准备数据
+            const allData = DATA[currentMode];
+            const start = levelIdx * 5;
+            const end = Math.min(start + 5, allData.length);
+            const levelData = allData.slice(start, end);
+            
+            let cards = [];
+            levelData.forEach(item => {
+                // 罗马音卡片
+                cards.push({ id: item.id, val: item.roma, type: 'roma', pairId: item.id });
+                // 假名卡片
+                cards.push({ id: item.id, val: item.kana, type: 'kana', pairId: item.id });
+            });
+            
+            // 洗牌
+            cards.sort(() => Math.random() - 0.5);
+            
+            renderBoard(cards);
+            startTimer();
+        }
+
+        function renderBoard(cards) {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            matchedCount = 0;
+            totalPairs = cards.length / 2;
+            
+            cards.forEach((item, index) => {
+                const card = createCard(item);
+                board.appendChild(card);
+                // 依次入场动画
+                setTimeout(() => card.classList.add('show'), index * 50);
+            });
+        }
+
+        function createCard(item) {
+            const el = document.createElement('div');
+            el.className = `card ${item.type === 'roma' ? 'color-a romaji' : 'color-b kana'}`;
+            el.textContent = item.val;
+            el.dataset.pairId = item.pairId; // 用于判断匹配
+            el.dataset.uuid = Math.random().toString(36).substr(2, 9); // 唯一标识，防止自己匹配自己
+
+            // 绑定拖拽事件
+            addDragListeners(el);
+            
+            return el;
+        }
+
+        // ✋ 核心拖拽逻辑
+        function addDragListeners(card) {
+            let startX, startY;
+            
+            const startDrag = (e) => {
+                // 如果已经匹配消除，或者正在动画中，禁止拖拽
+                if(card.classList.contains('matched')) return;
+                
+                // 激活音频上下文
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                e.preventDefault(); // 防止页面滚动
+                const point = e.touches ? e.touches[0] : e;
+                
+                startX = point.clientX;
+                startY = point.clientY;
+                
+                card.classList.add('dragging');
+                playSound('click');
+            };
+
+            const moveDrag = (e) => {
+                if(!card.classList.contains('dragging')) return;
+                e.preventDefault();
+                
+                const point = e.touches ? e.touches[0] : e;
+                const dx = point.clientX - startX;
+                const dy = point.clientY - startY;
+                
+                // 移动卡片
+                card.style.transform = `translate(${dx}px, ${dy}px) scale(1.2)`;
+            };
+
+            const endDrag = (e) => {
+                if(!card.classList.contains('dragging')) return;
+                card.classList.remove('dragging');
+                
+                // 获取松手位置的坐标
+                const point = e.changedTouches ? e.changedTouches[0] : e;
+                const dropX = point.clientX;
+                const dropY = point.clientY;
+                
+                // 暂时隐藏自己，以便探测下方的元素
+                card.style.visibility = 'hidden';
+                const elementBelow = document.elementFromPoint(dropX, dropY);
+                card.style.visibility = 'visible';
+                
+                // 查找目标卡片
+                const targetCard = elementBelow ? elementBelow.closest('.card') : null;
+
+                // 判定逻辑
+                if (targetCard && targetCard !== card && !targetCard.classList.contains('matched')) {
+                    checkMatch(card, targetCard);
+                } else {
+                    // 没拖到有效目标，回弹
+                    resetCardPosition(card);
+                }
+            };
+
+            // 绑定事件 (支持鼠标和触摸)
+            card.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', moveDrag);
+            document.addEventListener('mouseup', endDrag);
+
+            card.addEventListener('touchstart', startDrag, {passive: false});
+            document.addEventListener('touchmove', moveDrag, {passive: false});
+            document.addEventListener('touchend', endDrag);
+        }
+
+        function checkMatch(card1, card2) {
+            // 检查 pairId 是否一致
+            if (card1.dataset.pairId === card2.dataset.pairId) {
+                // ✅ 匹配成功
+                playSound('match');
+                
+                // 两个都消除
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                
+                // 更新进度
+                matchedCount++;
+                updateProgress();
+                
+                if(matchedCount >= totalPairs) {
+                    endGame(true);
+                }
+            } else {
+                // ❌ 匹配失败
+                playSound('wrong');
+                
+                // 目标卡片震动提示
+                card2.classList.add('wrong');
+                setTimeout(() => card2.classList.remove('wrong'), 400);
+                
+                // 拖拽卡片回弹
+                resetCardPosition(card1);
+            }
+        }
+
+        function resetCardPosition(card) {
+            // 使用 transition 平滑回弹
+            card.style.transition = 'transform 0.3s ease-out';
+            card.style.transform = 'translate(0, 0)';
+            
+            // 动画结束后清除 transition，以免影响下一次拖拽
+            setTimeout(() => {
+                card.style.transition = '';
+            }, 300);
+        }
+
+        function updateProgress() {
+            const pct = (matchedCount / totalPairs) * 100;
+            document.getElementById('progressBar').style.width = `${pct}%`;
+        }
+
+        // ================= 6. 计时与结算 =================
+        function startTimer() {
+            clearInterval(gameTimer);
+            startTime = Date.now();
+            const display = document.getElementById('gameTimer');
+            
+            if(isTimeMode) {
+                let timeLeft = 60;
+                display.textContent = timeLeft;
+                gameTimer = setInterval(() => {
+                    timeLeft--;
+                    display.textContent = timeLeft;
+                    if(timeLeft <= 0) endGame(false);
+                }, 1000);
+            } else {
+                gameTimer = setInterval(() => {
+                    const diff = Math.floor((Date.now() - startTime) / 1000);
+                    const m = String(Math.floor(diff / 60)).padStart(2, '0');
+                    const s = String(diff % 60).padStart(2, '0');
+                    display.textContent = `${m}:${s}`;
+                }, 1000);
+            }
+        }
+
+        function endGame(success) {
+            clearInterval(gameTimer);
+            if(success) {
+                playSound('win');
+                const timeStr = document.getElementById('gameTimer').textContent;
+                document.getElementById('resTitle').textContent = '🎉 挑战成功';
+                document.getElementById('resTime').textContent = timeStr;
+                document.getElementById('resScore').textContent = '100';
+                document.getElementById('resultModal').classList.add('open');
+            } else {
+                alert('时间到！挑战失败');
+                exitGame();
+            }
+        }
+
+        function exitGame() {
+            clearInterval(gameTimer);
+            document.getElementById('gameScreen').style.display = 'none';
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').classList.remove('open');
+            exitGame();
+        }
+        
+        // 首次点击激活音频
+        document.body.addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }, { once: true });
+
+    </script>
+</body>
+</html>

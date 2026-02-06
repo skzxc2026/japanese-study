@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日语贪吃蛇·究极试炼</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+JP:wght@700&display=swap');
+
+        :root {
+            --primary: #FF4081;
+            --bg-color: #f0f4f8;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --text-color: #333;
+            --font-main: 'Fredoka One', 'Noto Sans JP', sans-serif;
+        }
+
+        /* ================= 🎨 皮肤定义 ================= */
+        body[data-skin="macaron"] { --bg-color: #FFF0F5; --primary: #FF80AB; --text-color: #880E4F; }
+        body[data-skin="cyber"]   { --bg-color: #050510; --primary: #00E5FF; --text-color: #00E5FF; --panel-bg: rgba(20,20,30,0.9); }
+        body[data-skin="forest"]  { --bg-color: #E8F5E9; --primary: #4CAF50; --text-color: #1B5E20; }
+        body[data-skin="hell"]    { --bg-color: #2b0808; --primary: #FF3D00; --text-color: #FF5252; --panel-bg: rgba(50,10,10,0.9); }
+
+        * { box-sizing: border-box; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            transition: background 0.5s;
+        }
+
+        #bgCanvas { position: absolute; top:0; left:0; width:100%; height:100%; z-index: -1; }
+
+        /* HUD */
+        .hud {
+            position: absolute; top: 0; left: 0; width: 100%;
+            padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            z-index: 20; pointer-events: none;
+        }
+        .hud-left, .hud-right { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+        
+        .pill {
+            background: var(--panel-bg); backdrop-filter: blur(5px);
+            padding: 6px 14px; border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 8px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        /* ❤️ 生命值 */
+        .hearts { font-size: 20px; letter-spacing: 2px; }
+        
+        /* 🔥 连击特效 */
+        .combo-box {
+            position: absolute; right: 20px; top: 80px;
+            text-align: right; pointer-events: none;
+            transform: rotate(-5deg); opacity: 0; transition: 0.3s;
+        }
+        .combo-box.show { opacity: 1; transform: rotate(-5deg) scale(1.2); }
+        .combo-num { font-size: 32px; font-weight: 900; color: #FFC107; text-shadow: 2px 2px 0 rgba(0,0,0,0.2); }
+        .combo-label { font-size: 12px; color: var(--text-color); font-weight: bold; }
+
+        /* 目标提示框 */
+        .target-box {
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            background: var(--panel-bg); padding: 8px 20px; border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            text-align: center; border: 3px solid var(--primary);
+            z-index: 15; pointer-events: none;
+        }
+        .target-label { font-size: 10px; opacity: 0.7; }
+        .target-val { font-size: 22px; font-weight: 900; color: var(--primary); }
+
+        .game-container { flex: 1; position: relative; width: 100%; height: 100%; }
+        canvas#gameCanvas { z-index: 1; display: block; }
+
+        /* 警告边框 */
+        .danger-border {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            border: 0px solid rgba(255,0,0,0.5); pointer-events: none; z-index: 5;
+            transition: border-width 0.1s;
+        }
+
+        /* 摇杆 */
+        .controls {
+            position: absolute; bottom: 30px; left: 30px; right: 30px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            z-index: 30; pointer-events: none;
+        }
+        .joystick-zone {
+            width: 120px; height: 120px; background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.4); border-radius: 50%;
+            position: relative; pointer-events: auto; backdrop-filter: blur(2px);
+        }
+        .stick {
+            width: 50px; height: 50px; background: var(--primary);
+            border-radius: 50%; position: absolute; top: 35px; left: 35px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 2px solid white;
+        }
+        .action-btn {
+            width: 80px; height: 80px; background: white;
+            border-radius: 50%; border: 4px solid var(--primary);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 28px; color: var(--primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); pointer-events: auto;
+            transition: 0.1s; cursor: pointer;
+        }
+        .action-btn:active { transform: scale(0.9); background: var(--primary); color: white; }
+
+        /* 菜单系统 */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 0.3s; padding: 20px;
+        }
+        .hidden { opacity: 0; pointer-events: none; }
+        
+        h1 { font-size: 28px; margin-bottom: 20px; color: var(--primary); text-align: center; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 350px; }
+        .btn-card {
+            background: #f5f5f5; border-radius: 15px; padding: 15px;
+            text-align: center; cursor: pointer; border: 2px solid transparent;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.2s;
+        }
+        .btn-card:active { transform: scale(0.95); }
+        .btn-card.selected { border-color: var(--primary); background: #fff0f5; }
+        .btn-title { font-weight: bold; margin-bottom: 5px; font-size: 16px; }
+        .btn-desc { font-size: 12px; color: #666; }
+        
+        .btn-start {
+            margin-top: 30px; width: 80%; max-width: 300px;
+            background: var(--primary); color: white; border: none;
+            padding: 15px; border-radius: 50px; font-size: 20px; font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); cursor: pointer;
+        }
+
+        .toast {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px;
+            font-size: 16px; opacity: 0; transition: 0.2s; pointer-events: none; z-index: 50;
+            white-space: nowrap; font-weight: bold; border: 2px solid #FFD700;
+        }
+        .toast.show { opacity: 1; top: 25%; transform: translate(-50%, -50%) scale(1.1); }
+
+    </style>
+</head>
+<body data-skin="macaron">
+
+    <canvas id="bgCanvas"></canvas>
+    <div class="danger-border" id="dangerBorder"></div>
+
+    <!-- HUD -->
+    <div class="hud" id="hud" style="display:none;">
+        <div class="hud-left">
+            <div class="pill">🏆 <span id="scoreVal">0</span></div>
+            <div class="pill">❤️ <span id="livesVal" class="hearts">❤️❤️❤️</span></div>
+        </div>
+        <div class="hud-right">
+            <div class="pill" onclick="pauseGame()" style="cursor:pointer;">⏸</div>
+        </div>
+    </div>
+
+    <!-- 连击显示 -->
+    <div class="combo-box" id="comboBox">
+        <div class="combo-num" id="comboNum">x5</div>
+        <div class="combo-label">COMBO!</div>
+    </div>
+
+    <!-- 目标提示 -->
+    <div class="target-box" id="targetBox" style="display:none;">
+        <div class="target-label" id="targetLabel">目标</div>
+        <div class="target-val" id="targetVal">?</div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+    <div class="toast" id="toast">Combo x2!</div>
+
+    <div class="controls" id="controls" style="display:none;">
+        <div class="joystick-zone" id="joystick">
+            <div class="stick" id="stick"></div>
+        </div>
+        <div class="action-btn" id="boostBtn">⚡️</div>
+    </div>
+
+    <!-- 1. 难度选择 -->
+    <div class="screen" id="modeScreen">
+        <h1>🐍 选择试炼难度</h1>
+        <div class="btn-grid">
+            <div class="btn-card" onclick="selectMode('basic', this)">
+                <div class="btn-title">🐣 初级</div>
+                <div class="btn-desc">罗马音 ➜ 平假名</div>
+            </div>
+            <div class="btn-card" onclick="selectMode('night', this)">
+                <div class="btn-title">🦇 中级</div>
+                <div class="btn-desc">平假名 ➜ 片假名</div>
+            </div>
+            <div class="btn-card" onclick="selectMode('hell', this)">
+                <div class="btn-title">👹 地狱</div>
+                <div class="btn-desc">中文 ➜ 日语单词</div>
+            </div>
+        </div>
+        <button class="btn-start" onclick="gotoSkin()">下一步</button>
+    </div>
+
+    <!-- 2. 皮肤选择 -->
+    <div class="screen hidden" id="skinScreen">
+        <h1>🎨 选择战衣</h1>
+        <div class="btn-grid">
+            <div class="btn-card selected" onclick="selectSkin('macaron', this)">
+                <div class="btn-title">🌸 马卡龙</div>
+                <div class="btn-desc">清新可爱</div>
+            </div>
+            <div class="btn-card" onclick="selectSkin('cyber', this)">
+                <div class="btn-title">🌃 赛博</div>
+                <div class="btn-desc">霓虹光效</div>
+            </div>
+            <div class="btn-card" onclick="selectSkin('forest', this)">
+                <div class="btn-title">🍃 森林</div>
+                <div class="btn-desc">护眼绿色</div>
+            </div>
+            <div class="btn-card" onclick="selectSkin('hell', this)">
+                <div class="btn-title">🔥 熔岩</div>
+                <div class="btn-desc">深红压迫</div>
+            </div>
+        </div>
+        <button class="btn-start" onclick="startGame()">开始挑战</button>
+        <div style="margin-top:15px; font-size:12px; color:#999;" onclick="showScreen('modeScreen')">返回上一步</div>
+    </div>
+
+    <!-- 3. 结算 -->
+    <div class="screen hidden" id="overScreen">
+        <h1 style="color:#FF5252; margin-bottom:10px;">GAME OVER</h1>
+        <div style="font-size:18px; color:#666; margin-bottom:20px;" id="overReason">生命耗尽</div>
+        
+        <div style="display:flex; gap:20px; text-align:center; margin-bottom:30px;">
+            <div>
+                <div style="font-size:12px; color:#999;">最终得分</div>
+                <div style="font-size:28px; font-weight:bold;" id="finalScore">0</div>
+            </div>
+            <div>
+                <div style="font-size:12px; color:#999;">最高连击</div>
+                <div style="font-size:28px; font-weight:bold; color:#FFC107;" id="finalCombo">0</div>
+            </div>
+        </div>
+        
+        <button class="btn-start" onclick="showScreen('modeScreen')">返回主菜单</button>
+    </div>
+
+    <script>
+        // ================= 📚 数据 =================
+        const KANA_MAP = [
+            { r: 'a', h: 'あ', k: 'ア' }, { r: 'i', h: 'い', k: 'イ' }, { r: 'u', h: 'う', k: 'ウ' }, { r: 'e', h: 'え', k: 'エ' }, { r: 'o', h: 'お', k: 'オ' },
+            { r: 'ka', h: 'か', k: 'カ' }, { r: 'ki', h: 'き', k: 'キ' }, { r: 'ku', h: 'く', k: 'ク' }, { r: 'ke', h: 'け', k: 'ケ' }, { r: 'ko', h: 'こ', k: 'コ' },
+            { r: 'sa', h: 'さ', k: 'サ' }, { r: 'shi', h: 'し', k: 'シ' }, { r: 'su', h: 'す', k: 'ス' }, { r: 'se', h: 'せ', k: 'セ' }, { r: 'so', h: 'そ', k: 'ソ' },
+            { r: 'na', h: 'な', k: 'ナ' }, { r: 'ni', h: 'に', k: 'ニ' }, { r: 'nu', h: 'ぬ', k: 'ヌ' }, { r: 'ne', h: 'ね', k: 'ネ' }, { r: 'no', h: 'の', k: 'ノ' },
+            { r: 'ha', h: 'は', k: 'ハ' }, { r: 'hi', h: 'ひ', k: 'ヒ' }, { r: 'fu', h: 'ふ', k: 'フ' }, { r: 'he', h: 'へ', k: 'ヘ' }, { r: 'ho', h: 'ほ', k: 'ホ' },
+            { r: 'ma', h: 'ま', k: 'マ' }, { r: 'mi', h: 'み', k: 'ミ' }, { r: 'mu', h: 'む', k: 'ム' }, { r: 'me', h: 'め', k: 'メ' }, { r: 'mo', h: 'も', k: 'モ' },
+            { r: 'ra', h: 'ら', k: 'ラ' }, { r: 'ri', h: 'り', k: 'リ' }, { r: 'ru', h: 'る', k: 'ル' }, { r: 're', h: 'れ', k: 'レ' }, { r: 'ro', h: 'ろ', k: 'ロ' },
+            { r: 'wa', h: 'わ', k: 'ワ' }, { r: 'wo', h: 'を', k: 'ヲ' }, { r: 'n', h: 'ん', k: 'ン' }
+        ];
+        const WORDS = [
+            { q: '猫', a: 'ねこ' }, { q: '犬', a: 'いぬ' }, { q: '鸟', a: 'とり' }, { q: '花', a: 'はな' },
+            { q: '月', a: 'つき' }, { q: '雨', a: 'あめ' }, { q: '樱花', a: 'さくら' }, { q: '雪', a: 'ゆき' }
+        ];
+        const FOOD_COLORS = ['#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF', '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41', '#FFD740', '#FFAB40', '#FF6E40'];
+
+        // ================= 🎮 引擎 =================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const bgCanvas = document.getElementById('bgCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+
+        let W, H;
+        let snake = [], path = [];
+        let foods = [], particles = [];
+        let angle = -Math.PI/2, targetAngle = -Math.PI/2;
+        let speed = 3, baseSpeed = 3;
+        let score = 0, lives = 3, combo = 0, maxCombo = 0;
+        let gameLoop;
+        let mode = 'basic', skin = 'macaron';
+        let currentTarget = null; 
+        let isPaused = true;
+        let camShake = 0;
+
+        // UI 选择状态
+        let selectedMode = 'basic';
+        let selectedSkin = 'macaron';
+
+        function init() {
+            resize();
+            window.addEventListener('resize', resize);
+            startBgAnim();
+            selectMode('basic', document.querySelector('.btn-card')); // 默认选中
+        }
+
+        function resize() {
+            W = window.innerWidth; H = window.innerHeight;
+            canvas.width = W; canvas.height = H;
+            bgCanvas.width = W; bgCanvas.height = H;
+        }
+
+        // ================= 🕹️ 流程控制 =================
+        function selectMode(m, el) {
+            selectedMode = m;
+            document.querySelectorAll('#modeScreen .btn-card').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+        function gotoSkin() { showScreen('skinScreen'); }
+        function selectSkin(s, el) {
+            selectedSkin = s;
+            document.querySelectorAll('#skinScreen .btn-card').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+            document.body.setAttribute('data-skin', s); // 预览背景
+        }
+
+        function startGame() {
+            mode = selectedMode;
+            skin = selectedSkin;
+            score = 0; lives = 3; combo = 0; maxCombo = 0;
+            snake = []; path = []; foods = []; particles = [];
+            
+            // 初始化蛇
+            let cx = W/2, cy = H/2;
+            for(let i=0; i<40; i++) path.push({x: cx, y: cy + i*4});
+            snake = [path[0], path[10], path[20]]; 
+            
+            angle = -Math.PI/2; targetAngle = angle;
+            
+            showScreen(null); 
+            document.getElementById('hud').style.display = 'flex';
+            document.getElementById('targetBox').style.display = 'block';
+            document.getElementById('controls').style.display = 'flex';
+            document.body.setAttribute('data-skin', skin);
+            
+            updateHUD();
+            updateTargetLabel();
+
+            isPaused = false;
+            nextTurn();
+            loop();
+        }
+
+        function updateTargetLabel() {
+            const label = document.getElementById('targetLabel');
+            if(mode === 'basic') label.innerText = "看罗马音 ➜ 找平假名";
+            else if(mode === 'night') label.innerText = "看平假名 ➜ 找片假名";
+            else label.innerText = "看中文 ➜ 找日语单词";
+        }
+
+        function nextTurn() {
+            // 1. 题目
+            if (mode === 'basic') {
+                const item = KANA_MAP[Math.floor(Math.random() * KANA_MAP.length)];
+                currentTarget = { q: item.r, a: item.h, speak: item.h };
+            } else if (mode === 'night') {
+                const item = KANA_MAP[Math.floor(Math.random() * KANA_MAP.length)];
+                currentTarget = { q: item.h, a: item.k, speak: item.h };
+            } else {
+                const item = WORDS[Math.floor(Math.random() * WORDS.length)];
+                currentTarget = { q: item.q, a: item.a, speak: item.a };
+            }
+
+            document.getElementById('targetVal').innerText = currentTarget.q;
+            speak(currentTarget.speak);
+
+            // 2. 食物
+            foods = [];
+            spawnFood(currentTarget.a, true, 'normal'); // 正确答案
+
+            // 干扰项
+            const distractorCount = mode === 'hell' ? 6 : 4;
+            for(let i=0; i<distractorCount; i++) {
+                let wrongVal;
+                if(mode === 'basic') wrongVal = KANA_MAP[Math.floor(Math.random()*KANA_MAP.length)].h;
+                else if(mode === 'night') wrongVal = KANA_MAP[Math.floor(Math.random()*KANA_MAP.length)].k;
+                else wrongVal = WORDS[Math.floor(Math.random()*WORDS.length)].a;
+                if(wrongVal !== currentTarget.a) spawnFood(wrongVal, false, 'normal');
+            }
+
+            // 🎁 随机奖励 (20% 概率)
+            if(Math.random() < 0.2) {
+                if(Math.random() < 0.5) spawnFood('⭐', false, 'star'); // 星星
+                else {
+                    // 稀有悬赏 (随机片假名)
+                    let rare = KANA_MAP[Math.floor(Math.random()*KANA_MAP.length)].k;
+                    spawnFood(rare, false, 'rare');
+                }
+            }
+        }
+
+        function spawnFood(val, isAnswer, type) {
+            let x, y, ok=false;
+            let color = FOOD_COLORS[Math.floor(Math.random() * FOOD_COLORS.length)];
+            while(!ok) {
+                x = 30 + Math.random()*(W-60);
+                y = 30 + Math.random()*(H-60);
+                ok = true;
+                if(Math.hypot(x-snake[0].x, y-snake[0].y) < 120) ok=false;
+                for(let f of foods) if(Math.hypot(x-f.x, y-f.y) < 40) ok=false;
+            }
+            foods.push({x, y, val, isAnswer, type, color, r: type==='normal'?16:18});
+        }
+
+        function loop() {
+            if(isPaused) return;
+            update();
+            draw();
+            gameLoop = requestAnimationFrame(loop);
+        }
+
+        function update() {
+            // 角度平滑
+            let diff = targetAngle - angle;
+            while(diff <= -Math.PI) diff += Math.PI*2;
+            while(diff > Math.PI) diff -= Math.PI*2;
+            angle += diff * 0.15;
+
+            let currSpeed = isBoosting ? baseSpeed * 1.8 : baseSpeed;
+            let head = { x: snake[0].x + Math.cos(angle)*currSpeed, y: snake[0].y + Math.sin(angle)*currSpeed };
+            
+            // 💥 撞墙检测
+            const R = 12; 
+            if(head.x < R || head.x > W-R || head.y < R || head.y > H-R) {
+                gameOver("撞墙身亡");
+                return;
+            }
+            
+            // 警告边框
+            const margin = 50;
+            const borderDiv = document.getElementById('dangerBorder');
+            if(head.x < margin || head.x > W-margin || head.y < margin || head.y > H-margin) {
+                borderDiv.style.borderWidth = "5px";
+                borderDiv.style.borderColor = "rgba(255, 0, 0, 0.6)";
+            } else {
+                borderDiv.style.borderWidth = "0px";
+            }
+
+            path.unshift(head);
+            if(path.length > (snake.length * 8) + 50) path.pop();
+
+            snake[0] = head;
+            for(let i=1; i<snake.length; i++) {
+                let idx = i * (isBoosting ? 4 : 8);
+                if(idx < path.length) snake[i] = path[idx];
+            }
+
+            checkCollisions(head);
+            updateParticles();
+            if(camShake > 0) camShake *= 0.9;
+        }
+
+        function checkCollisions(head) {
+            for(let i=foods.length-1; i>=0; i--) {
+                let f = foods[i];
+                if(Math.hypot(head.x-f.x, head.y-f.y) < f.r + 12) {
+                    handleEat(f, i);
+                }
+            }
+            for(let i=15; i<snake.length; i++) {
+                if(Math.hypot(head.x-snake[i].x, head.y-snake[i].y) < 8) {
+                    gameOver("咬到自己");
+                }
+            }
+        }
+
+        function handleEat(f, idx) {
+            foods.splice(idx, 1);
+
+            // 1. 特殊奖励
+            if(f.type === 'star') {
+                score += 30;
+                playSound('bonus');
+                createExplosion(f.x, f.y, '#FFD700');
+                showToast("⭐ 星星奖励 +30");
+                growSnake(3);
+                updateHUD();
+                return;
+            }
+            if(f.type === 'rare') {
+                score += 50;
+                playSound('bonus');
+                createExplosion(f.x, f.y, '#E040FB');
+                showToast("🎁 稀有悬赏 +50");
+                growSnake(5);
+                updateHUD();
+                return;
+            }
+
+            // 2. 正常答题
+            if(f.isAnswer) {
+                // ✅ 正确
+                score += 10;
+                combo++;
+                if(combo > maxCombo) maxCombo = combo;
+                
+                // 连击奖励
+                if(combo % 10 === 0) {
+                    score += 50;
+                    playSound('bonus');
+                    showToast(`🔥 ${combo}连击! +50分`);
+                } else {
+                    playSound('correct');
+                    showToast("✨ 正解!");
+                }
+                
+                createExplosion(f.x, f.y, '#FFEB3B');
+                growSnake(1);
+                setTimeout(nextTurn, 200);
+            } else {
+                // ❌ 错误
+                lives--;
+                combo = 0; // 连击中断
+                playSound('wrong');
+                createExplosion(f.x, f.y, '#999');
+                camShake = 5;
+                showToast("😵 错了! 生命-1");
+                
+                if(snake.length > 3) snake.pop();
+                
+                if(lives <= 0) {
+                    gameOver("生命耗尽");
+                } else {
+                    // 补一个干扰项
+                    let wrongVal;
+                    if(mode === 'basic') wrongVal = KANA_MAP[Math.floor(Math.random()*KANA_MAP.length)].h;
+                    else if(mode === 'night') wrongVal = KANA_MAP[Math.floor(Math.random()*KANA_MAP.length)].k;
+                    else wrongVal = WORDS[Math.floor(Math.random()*WORDS.length)].a;
+                    spawnFood(wrongVal, false, 'normal');
+                }
+            }
+            updateHUD();
+        }
+
+        function growSnake(n) { for(let i=0; i<n; i++) snake.push({x:-100,y:-100}); }
+
+        function updateHUD() {
+            document.getElementById('scoreVal').innerText = score;
+            let hearts = "";
+            for(let i=0; i<3; i++) hearts += (i<lives ? "❤️" : "🖤");
+            document.getElementById('livesVal').innerText = hearts;
+
+            // 连击显示
+            const box = document.getElementById('comboBox');
+            if(combo >= 2) {
+                box.classList.add('show');
+                document.getElementById('comboNum').innerText = "x" + combo;
+            } else {
+                box.classList.remove('show');
+            }
+        }
+
+        // ================= 🎨 渲染 =================
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.save();
+            if(camShake > 0.5) ctx.translate((Math.random()-0.5)*camShake, (Math.random()-0.5)*camShake);
+
+            // 食物
+            foods.forEach(f => {
+                ctx.save();
+                ctx.translate(f.x, f.y);
+                let s = 1 + Math.sin(Date.now()/250)*0.08;
+                ctx.scale(s, s);
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, f.r, 0, Math.PI*2);
+                
+                if(f.type === 'star') ctx.fillStyle = '#FFD700';
+                else if(f.type === 'rare') ctx.fillStyle = '#E040FB';
+                else ctx.fillStyle = f.color;
+                
+                if(skin === 'cyber' || skin === 'hell') { ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle; }
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = "#FFF";
+                ctx.font = (f.val.length > 1 ? "bold 12px" : "bold 16px") + " Arial";
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(f.val, 0, 1);
+                ctx.restore();
+            });
+
+            // 蛇
+            let style = getComputedStyle(document.body);
+            let headC = style.getPropertyValue('--primary').trim();
+            // 连击特效：身体变色
+            let bodyC = combo >= 10 ? '#FFD700' : headC; 
+
+            for(let i=snake.length-1; i>=0; i--) {
+                let p = snake[i];
+                let isHead = i===0;
+                
+                ctx.beginPath();
+                let r = isHead ? 13 : 11;
+                ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+                ctx.fillStyle = isHead ? headC : bodyC;
+                ctx.globalAlpha = isHead ? 1 : 0.7;
+                
+                if(skin === 'cyber' || skin === 'hell' || combo >= 10) { 
+                    ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle; 
+                }
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+
+                if(isHead) {
+                    ctx.fillStyle = "white";
+                    let ex = Math.cos(angle-0.6)*6, ey = Math.sin(angle-0.6)*6;
+                    ctx.beginPath(); ctx.arc(p.x+ex, p.y+ey, 3.5, 0, Math.PI*2); ctx.fill();
+                    ex = Math.cos(angle+0.6)*6; ey = Math.sin(angle+0.6)*6;
+                    ctx.beginPath(); ctx.arc(p.x+ex, p.y+ey, 3.5, 0, Math.PI*2); ctx.fill();
+                }
+            }
+
+            // 粒子
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+
+        function startBgAnim() {
+            let offset = 0;
+            function loop() {
+                offset += 0.5;
+                bgCtx.clearRect(0, 0, W, H);
+                bgCtx.strokeStyle = "rgba(0,0,0,0.05)";
+                if(skin === 'cyber') bgCtx.strokeStyle = "rgba(0,255,255,0.1)";
+                if(skin === 'hell') bgCtx.strokeStyle = "rgba(255,0,0,0.1)";
+                
+                bgCtx.lineWidth = 1;
+                bgCtx.beginPath();
+                for(let x=offset%40; x<W; x+=40) { bgCtx.moveTo(x,0); bgCtx.lineTo(x,H); }
+                for(let y=offset%40; y<H; y+=40) { bgCtx.moveTo(0,y); bgCtx.lineTo(W,y); }
+                bgCtx.stroke();
+                requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+        // ================= ✨ 特效 & 音频 =================
+        function createExplosion(x, y, color) {
+            for(let i=0; i<12; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12,
+                    life: 1.0, size: Math.random()*5+2, color: color
+                });
+            }
+        }
+        function updateParticles() {
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.life -= 0.06;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            
+            if(type === 'correct') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(1200, now+0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.2);
+                osc.start(); osc.stop(now+0.2);
+            } else if (type === 'bonus') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now); osc.frequency.setValueAtTime(1200, now+0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.3);
+                osc.start(); osc.stop(now+0.3);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(50, now+0.3);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.3);
+                osc.start(); osc.stop(now+0.3);
+            } else if (type === 'crash') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now+0.5);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now+0.5);
+                osc.start(); osc.stop(now+0.5);
+            }
+        }
+
+        // ================= 📱 UI =================
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            if(id) document.getElementById(id).classList.remove('hidden');
+        }
+        function pauseGame() { isPaused = true; showScreen('modeScreen'); }
+        
+        function gameOver(reason) {
+            isPaused = true;
+            playSound('crash');
+            camShake = 20;
+            document.getElementById('dangerBorder').style.borderWidth = "0px";
+            document.getElementById('overReason').innerText = reason;
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('finalCombo').innerText = maxCombo;
+            setTimeout(() => showScreen('overScreen'), 500);
+        }
+
+        function showToast(msg) {
+            let t = document.getElementById('toast');
+            t.innerText = msg; t.classList.add('show');
+            setTimeout(()=>t.classList.remove('show'), 1500);
+        }
+
+        // 摇杆
+        let isBoosting = false;
+        const stick = document.getElementById('stick');
+        const joy = document.getElementById('joystick');
+        let drag = false;
+        
+        const handleMove = (x, y, rect) => {
+            let dx = x - (rect.left + rect.width/2);
+            let dy = y - (rect.top + rect.height/2);
+            let ang = Math.atan2(dy, dx);
+            let dist = Math.min(Math.sqrt(dx*dx+dy*dy), 40);
+            stick.style.transform = `translate(${Math.cos(ang)*dist}px, ${Math.sin(ang)*dist}px)`;
+            targetAngle = ang;
+        };
+
+        joy.addEventListener('mousedown', () => drag=true);
+        window.addEventListener('mouseup', () => { drag=false; stick.style.transform='none'; });
+        window.addEventListener('mousemove', e => { if(drag) handleMove(e.clientX, e.clientY, joy.getBoundingClientRect()); });
+        joy.addEventListener('touchstart', e => { drag=true; handleMove(e.touches[0].clientX, e.touches[0].clientY, joy.getBoundingClientRect()); });
+        joy.addEventListener('touchmove', e => { if(drag) handleMove(e.touches[0].clientX, e.touches[0].clientY, joy.getBoundingClientRect()); });
+        joy.addEventListener('touchend', () => { drag=false; stick.style.transform='none'; });
+
+        document.getElementById('boostBtn').addEventListener('touchstart', (e)=>{e.preventDefault(); isBoosting=true;});
+        document.getElementById('boostBtn').addEventListener('touchend', (e)=>{e.preventDefault(); isBoosting=false;});
+        document.getElementById('boostBtn').addEventListener('mousedown', ()=>isBoosting=true);
+        document.getElementById('boostBtn').addEventListener('mouseup', ()=>isBoosting=false);
+
+        function speak(t) { 
+            if('speechSynthesis' in window) {
+                let u = new SpeechSynthesisUtterance(t); 
+                u.lang='ja-JP'; u.rate=1.0; 
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(u); 
+            }
+        }
+
+        init();
+    </script>
+
+
+<!-- 暂停遮罩层 -->
+<div id="pause-overlay" style="
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 10000;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+">
+    <h1 style="font-size: 40px; margin-bottom: 20px;">⏸️ 游戏暂停</h1>
+    <button onclick="resumeGame()" style="
+        padding: 15px 40px;
+        font-size: 20px;
+        background: #00b894;
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        font-weight: bold;
+    ">▶️ 继续游戏</button>
+</div>
+
+</body>
+
+</html>
