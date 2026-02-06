@@ -38,6 +38,9 @@
             flex-shrink: 0; border-right: 1px solid var(--border);
             transition: transform 0.3s ease;
             overflow-y: auto;
+            /* ✅ 优化滚动 */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
         .app-title { padding: 20px; font-size: 18px; font-weight: bold; color: var(--primary); border-bottom: 1px solid var(--border); }
         .nav-group-title { padding: 15px 20px 5px; font-size: 12px; color: #999; font-weight: bold; }
@@ -85,7 +88,13 @@
             padding: 0 2px;
         }
 
-        .article-list { flex: 1; overflow-y: auto; }
+        .article-list { 
+            flex: 1; 
+            overflow-y: auto; 
+            /* ✅ 优化滚动 */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
         .article-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
         .article-item:hover { background: #f5f5f5; }
         .article-item.active { background: #ffeceb; }
@@ -96,7 +105,18 @@
 
         /* ================= 3. 右侧内容区 ================= */
         .content-panel { flex: 1; display: flex; flex-direction: row; overflow: hidden; position: relative; }
-        .main-text-area { flex: 1; padding: 30px 50px; overflow-y: auto; min-width: 300px; position: relative; }
+        
+        /* ✅ 文章正文区域：关键滚动属性 */
+        .main-text-area { 
+            flex: 1; 
+            padding: 30px 50px; 
+            overflow-y: auto; 
+            min-width: 300px; 
+            position: relative;
+            /* 开启 iOS 惯性滚动 */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
         
         /* 悬浮按钮 */
         .floating-toggle-btn {
@@ -137,7 +157,16 @@
             z-index: 160;
         }
         .grammar-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; background: #fbfbfb; }
-        .grammar-list { padding: 15px; overflow-y: auto; flex: 1; }
+        
+        /* ✅ 语法列表：关键滚动属性 */
+        .grammar-list { 
+            padding: 15px; 
+            overflow-y: auto; 
+            flex: 1; 
+            /* 开启 iOS 惯性滚动 */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
         
         .grammar-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .g-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -145,87 +174,6 @@
         .g-level { background: #d93025; color: white; font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold; transform: translateY(-1px); }
         .g-mean { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
         .g-desc { font-size: 12px; color: #777; line-height: 1.5; }
-
-        /* ================= 5. 子菜单样式 ================= */
-        .submenu-box {
-            display: none;
-            background-color: #fcfcfc;
-            border-bottom: 1px solid #eee;
-        }
-        .submenu-box.open {
-            display: block;
-        }
-        .nav-item.sub-item {
-            padding-left: 45px;
-            font-size: 13px;
-            color: #666;
-            background: #fafafa;
-        }
-        .nav-item.sub-item:hover {
-            background: #eee;
-        }
-        .nav-item.sub-item.active {
-            background: #fff5f5;
-            color: #d93025;
-            border-right: 3px solid #d93025;
-            font-weight: bold;
-        }
-        .menu-arrow {
-            float: right;
-            font-size: 10px;
-            color: #bbb;
-            transition: transform 0.2s;
-        }
-        .nav-item.open .menu-arrow {
-            transform: rotate(180deg);
-        }
-
-        /* ================= 游戏菜单样式 ================= */
-        .game-menu-container {
-            padding: 20px;
-            text-align: center;
-        }
-
-        .game-menu-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 30px;
-        }
-
-        .difficulty-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-        }
-
-        .difficulty-btn {
-            padding: 20px;
-            border: 2px solid var(--primary);
-            background: white;
-            color: var(--primary);
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .difficulty-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(217, 48, 37, 0.3);
-        }
-
-        .difficulty-btn.easy { border-color: #4caf50; color: #4caf50; }
-        .difficulty-btn.easy:hover { background: #4caf50; color: white; }
-
-        .difficulty-btn.medium { border-color: #ff9800; color: #ff9800; }
-        .difficulty-btn.medium:hover { background: #ff9800; color: white; }
-
-        .difficulty-btn.hard { border-color: #f44336; color: #f44336; }
-        .difficulty-btn.hard:hover { background: #f44336; color: white; }
 
         /* ================= 游戏全屏修复 ================= */
         #articleContent {
@@ -305,10 +253,6 @@
             }
             .floating-toggle-btn span { font-size: 24px; margin: 0; }
             .btn-text { display: none; }
-
-            .difficulty-buttons {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
@@ -344,22 +288,8 @@
         <div class="nav-group-title">日语小游戏</div>
         
         <!-- 五十音图菜单 -->
-        <div class="nav-item" id="nav-kana-parent" onclick="toggleSubMenu('kana-submenu', this)">
-            五十音图
-            <span class="menu-arrow">▼</span>
-        </div>
-
-        <!-- 五十音子菜单 -->
-        <div class="submenu-box" id="kana-submenu">
-            <div class="nav-item sub-item" onclick="loadGameMenu('g01_kana_match.html', '🎮 假名连连看')">
-                🎮 假名连连看
-            </div>
-            <div class="nav-item sub-item" onclick="loadGameMenu('g03_kana_order_puzzle.html', '🧩 拼图大作战')">
-                🧩 拼图大作战
-            </div>
-            <div class="nav-item sub-item" onclick="loadGameMenu('g04_snake.html', '🐍 日语贪吃蛇')">
-                🐍 日语贪吃蛇
-            </div>
+        <div class="nav-item" onclick="loadModule('games_kana', '五十音图小游戏')">
+            五十音图小游戏
         </div>
 
     </div>
@@ -407,6 +337,28 @@
     <audio id="audioPlayer"></audio>
 
     <script>
+        // 定义游戏数据
+        const gameData = [
+            {
+                title: '🎮 假名连连看',
+                requirements: '通过消除相同的假名来记忆五十音图',
+                writing_type: '记忆游戏',
+                url: 'g01_kana_match.html'
+            },
+            {
+                title: '🧩 拼图大作战',
+                requirements: '将打乱的假名拼回正确的位置',
+                writing_type: '益智游戏',
+                url: 'g03_kana_order_puzzle.html'
+            },
+            {
+                title: '🐍 日语贪吃蛇',
+                requirements: '吃掉正确的假名，让蛇变长',
+                writing_type: '反应游戏',
+                url: 'g04_snake.html'
+            }
+        ];
+
         let currentSheetData = [];
         let currentSheetName = '';
         let isGamePaused = false;
@@ -480,7 +432,12 @@
             });
 
             currentSheetName = sheetName;
-            currentSheetData = db[sheetName] || [];
+            
+            if (sheetName === 'games_kana') {
+                currentSheetData = gameData;
+            } else {
+                currentSheetData = db[sheetName] || [];
+            }
 
             renderArticleList(currentSheetData, '');
         }
@@ -532,6 +489,8 @@
                     typeText = item.writing_type || '基础';
                 } else if (currentSheetName === 'writing_material_large') {
                     typeText = item.exam_name || '综合';
+                } else if (currentSheetName === 'games_kana') {
+                    typeText = item.writing_type || '游戏';
                 } else {
                     typeText = yearDisplay;
                 }
@@ -560,6 +519,12 @@
                 document.getElementById('contentPanel').classList.add('active');
                 document.getElementById('mobileBackBtn').style.display = 'flex';
                 document.querySelector('.mh-left').style.display = 'none';
+            }
+
+            // ✅ 直接启动游戏
+            if (item.url && item.url.includes('.html')) {
+                startGame(item.url, item.title);
+                return; 
             }
 
             const contentEl = document.getElementById('articleContent');
@@ -645,53 +610,12 @@
             }
         }
 
-        function toggleSubMenu(menuId, parentEl) {
-            const menu = document.getElementById(menuId);
-            const isOpen = menu.classList.contains('open');
-            
-            document.querySelectorAll('.submenu-box.open').forEach(m => {
-                if (m.id !== menuId) {
-                    m.classList.remove('open');
-                    const parent = m.previousElementSibling;
-                    if (parent) parent.classList.remove('open');
-                }
-            });
-            
-            menu.classList.toggle('open');
-            parentEl.classList.toggle('open');
-        }
-
-        // ================= 游戏菜单系统 ✅ 新增 =================
-        function loadGameMenu(url, title) {
-            // 保存游戏信息到栈
-            gameMenuStack.push({ url: url, title: title });
+        // ================= 启动游戏 (直接进入) =================
+        function startGame(url, title) {
+            // 保存当前游戏状态
             currentGameUrl = url;
             currentGameTitle = title;
-
-            const contentEl = document.getElementById('articleContent');
-            contentEl.innerHTML = `
-                <div class="game-menu-container">
-                    <div class="game-menu-title">${title}</div>
-                    <div style="margin-bottom: 30px; color: #666; font-size: 14px;">
-                        请选择难度开始游戏
-                    </div>
-                    <div class="difficulty-buttons">
-                        <button class="difficulty-btn easy" onclick="window.parent.startGame('easy')">
-                            🟢 简单
-                        </button>
-                        <button class="difficulty-btn medium" onclick="window.parent.startGame('medium')">
-                            🟡 中等
-                        </button>
-                        <button class="difficulty-btn hard" onclick="window.parent.startGame('hard')">
-                            🔴 困难
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // ================= 启动游戏 ✅ 新增 =================
-        function startGame(difficulty) {
+            gameMenuStack.push({ url: url, title: title });
             isGamePaused = false;
 
             const contentEl = document.getElementById('articleContent');
@@ -706,7 +630,8 @@
             contentEl.style.right = '0';
             contentEl.style.bottom = '0';
             
-            const gamePath = `games/${currentGameUrl}?difficulty=${difficulty}`;
+            // ✅ 默认设置 difficulty=medium
+            const gamePath = `games/${url}?difficulty=medium`;
             
             contentEl.innerHTML = `
                 <div style="
@@ -730,24 +655,6 @@
                     ">
                         <!-- 左侧：返回按钮组 -->
                         <div style="display: flex; gap: 10px;">
-                            <!-- 返回上一页 -->
-                            <button onclick="window.parent.backToPreviousMenu()" style="
-                                background: rgba(255,255,255,0.2);
-                                border: 1px solid rgba(255,255,255,0.4);
-                                color: white;
-                                padding: 8px 12px;
-                                border-radius: 6px;
-                                cursor: pointer;
-                                font-size: 13px;
-                                font-weight: bold;
-                                transition: all 0.3s;
-                                display: flex;
-                                align-items: center;
-                                gap: 4px;
-                            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                                ⬅️ 上一页
-                            </button>
-
                             <!-- 返回主页 -->
                             <button onclick="window.parent.backToList()" style="
                                 background: rgba(255,255,255,0.2);
@@ -763,7 +670,7 @@
                                 align-items: center;
                                 gap: 4px;
                             " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                                🏠 主页
+                                🏠 退出游戏
                             </button>
                         </div>
 
@@ -773,7 +680,7 @@
                             font-weight: bold;
                             text-shadow: 0 1px 3px rgba(0,0,0,0.3);
                         ">
-                            🎮 ${currentGameTitle}
+                            🎮 ${title}
                         </div>
 
                         <!-- 右侧：暂停按钮 -->
@@ -811,7 +718,7 @@
                         " 
                         sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-presentation allow-top-navigation-by-user-activation allow-pointer-lock allow-downloads allow-top-navigation"
                         allow="autoplay; accelerometer; camera; gyroscope; magnetometer; microphone; payment; usb; fullscreen; picture-in-picture"
-                        title="${currentGameTitle}"
+                        title="${title}"
                         loading="eager"
                         frameborder="0">
                     </iframe>
@@ -872,7 +779,7 @@
             }, 300);
         }
 
-        // ================= 游戏暂停控制函数 ✅ 优化 =================
+        // ================= 游戏暂停控制函数 =================
         function toggleGamePause() {
             isGamePaused = !isGamePaused;
             const pauseOverlay = document.getElementById('pauseOverlay');
@@ -909,19 +816,9 @@
             }
         }
 
-        // ================= 返回上一页 ✅ 新增 =================
+        // ================= 返回上一页 =================
         function backToPreviousMenu() {
-            isGamePaused = false;
-            gameMenuStack.pop(); // 移除当前游戏
-
-            if (gameMenuStack.length > 0) {
-                // 返回到上一个菜单
-                const previousGame = gameMenuStack[gameMenuStack.length - 1];
-                loadGameMenu(previousGame.url, previousGame.title);
-            } else {
-                // 没有上一页，返回主列表
-                backToList();
-            }
+            backToList();
         }
 
         function toggleMobileMenu() {
